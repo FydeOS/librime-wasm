@@ -192,12 +192,22 @@ static void rime_declare_module_dependencies() {
   rime_require_module_levers();
 }
 
+#ifdef __EMSCRIPTEN__
 #include <unistd.h>
+#include <emscripten.h>
+#endif
 
 int main(int argc, char *argv[]) {
   RimeApi* rime = rime_get_api();
   rime_declare_module_dependencies();
 
+#ifdef __EMSCRIPTEN__
+  EM_ASM(
+    FS.mkdir('/working');
+    FS.mount(NODEFS, { root: '.' }, '/working');
+  );
+  chdir("/working");
+#endif
 
   RIME_STRUCT(RimeTraits, traits);
   traits.app_name = "rime.console";
