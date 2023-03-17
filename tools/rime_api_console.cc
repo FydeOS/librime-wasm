@@ -180,8 +180,24 @@ void on_message(void* context_object,
   }
 }
 
+extern void rime_require_module_core();
+extern void rime_require_module_dict();
+extern void rime_require_module_gears();
+extern void rime_require_module_levers();
+// link to default modules explicitly when building static library.
+static void rime_declare_module_dependencies() {
+  rime_require_module_core();
+  rime_require_module_dict();
+  rime_require_module_gears();
+  rime_require_module_levers();
+}
+
+#include <unistd.h>
+
 int main(int argc, char *argv[]) {
   RimeApi* rime = rime_get_api();
+  rime_declare_module_dependencies();
+
 
   RIME_STRUCT(RimeTraits, traits);
   traits.app_name = "rime.console";
