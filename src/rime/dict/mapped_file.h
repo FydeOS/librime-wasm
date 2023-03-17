@@ -85,8 +85,6 @@ struct List {
 
 // MappedFile class definition
 
-class MappedFileImpl;
-
 class MappedFile : boost::noncopyable {
  protected:
   explicit MappedFile(const string& file_name);
@@ -94,9 +92,7 @@ class MappedFile : boost::noncopyable {
 
   bool Create(size_t capacity);
   bool OpenReadOnly();
-  bool OpenReadWrite();
   bool Flush();
-  bool Resize(size_t capacity);
   bool ShrinkToFit();
 
   template <class T>
@@ -126,7 +122,9 @@ class MappedFile : boost::noncopyable {
  private:
   string file_name_;
   size_t size_ = 0;
-  the<MappedFileImpl> file_;
+  size_t buffer_size_ = 0;
+  uint8_t* buffer_{};
+  bool read_write_{};
 };
 
 // member function definitions
@@ -144,8 +142,13 @@ T* MappedFile::Allocate(size_t count) {
   if (used_space + required_space > file_size) {
     // not enough space; grow the file
     size_t new_size = (std::max)(used_space + required_space, file_size * 2);
-    if(!Resize(new_size) || !OpenReadWrite())
+    auto nb = static_cast<uint8_t *>(realloc(buffer_, new_size));
+    if (!nb) {
+      // realloc failed
       return NULL;
+    }
+    buffer_size_ = new_size;
+    buffer_ = nb;
   }
   T* ptr = reinterpret_cast<T*>(address() + used_space);
   std::memset(ptr, 0, required_space);
