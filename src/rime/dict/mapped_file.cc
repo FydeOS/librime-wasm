@@ -99,6 +99,9 @@ bool MappedFile::IsOpen() const {
 
 bool MappedFile::Flush() {
   if (buffer_) {
+    if (!read_write_)
+      return true;
+    // write buffer to disk
     std::ofstream file(file_name_, std::ios::binary | std::ios::trunc);
     file.write((char*)buffer_, size_);
     return file.good();
@@ -107,7 +110,9 @@ bool MappedFile::Flush() {
 }
 
 bool MappedFile::ShrinkToFit() {
-  LOG(INFO) << "shrinking file to fit data size. capacity: " << capacity();
+  LOG(INFO) << "shrinking file to fit data size. capacity: " << capacity() << ", actual size: " << size_;
+  // shrink buffer to current size
+  buffer_ = static_cast<uint8_t *>(realloc(buffer_, size_));
   return Flush();
 }
 
