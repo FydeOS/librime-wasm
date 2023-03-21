@@ -195,6 +195,13 @@ static void rime_declare_module_dependencies() {
 #ifdef __EMSCRIPTEN__
 #include <unistd.h>
 #include <emscripten.h>
+#include <emscripten/console.h>
+#include <emscripten/wasmfs.h>
+
+namespace wasmfs_rime {
+  backend_t my_wasmfs_create_node_backend(const char* root);
+}
+
 #endif
 
 int main(int argc, char *argv[]) {
@@ -202,10 +209,8 @@ int main(int argc, char *argv[]) {
   rime_declare_module_dependencies();
 
 #ifdef __EMSCRIPTEN__
-  EM_ASM(
-    FS.mkdir('/working');
-    FS.mount(NODEFS, { root: '.' }, '/working');
-  );
+  backend_t nodefs = wasmfs_rime::my_wasmfs_create_node_backend(".");
+  wasmfs_create_directory("/working", 0777, nodefs);
   chdir("/working");
 #endif
 
@@ -228,9 +233,10 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  FILE* f= fopen("cmds.txt","r");
   const int kMaxLength = 99;
   char line[kMaxLength + 1] = {0};
-  while (fgets(line, kMaxLength, stdin) != NULL) {
+  while (fgets(line, kMaxLength, f) != NULL) {
     for (char *p = line; *p; ++p) {
       if (*p == '\r' || *p == '\n') {
         *p = '\0';
@@ -247,6 +253,7 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Error processing key sequence: %s\n", line);
     }
   }
+  fclose(f);
 
   rime->destroy_session(session_id);
 
