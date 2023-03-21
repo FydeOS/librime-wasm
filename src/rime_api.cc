@@ -33,9 +33,6 @@ RIME_API void RimeSetupLogging(const char* app_name) {
   SetupLogging(app_name);
 }
 
-#if RIME_BUILD_SHARED_LIBS
-#define rime_declare_module_dependencies()
-#else
 extern void rime_require_module_core();
 extern void rime_require_module_dict();
 extern void rime_require_module_gears();
@@ -47,7 +44,6 @@ static void rime_declare_module_dependencies() {
   rime_require_module_gears();
   rime_require_module_levers();
 }
-#endif
 
 RIME_API void RimeSetup(RimeTraits *traits) {
   rime_declare_module_dependencies();
