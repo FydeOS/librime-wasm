@@ -72,7 +72,7 @@ RIME_API void SetupDeployer(RimeTraits *traits) {
 RIME_API void SetupLogging(const char* app_name, int min_log_level, const char* log_dir) {
 #ifdef RIME_ENABLE_LOGGING
   FLAGS_minloglevel = min_log_level;
-  FLAGS_alsologtostderr = true;
+  FLAGS_logtostderr = true;
   if (log_dir) {
     FLAGS_log_dir = log_dir;
   }
