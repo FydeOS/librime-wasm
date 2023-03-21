@@ -73,10 +73,10 @@ bool MappedFile::OpenReadOnly() {
   if (buffer_) {
     buffer_size_ = size_ = s;
     read_write_ = false;
-    int fd = open(file_name_.c_str(), O_RDONLY | O_TRUNC);
-    if (fd != -1) {
-      read(fd, (char*)buffer_, size_);
-      close(fd);
+    FILE* f = fopen(file_name_.c_str(), "r");
+    if (f) {
+      fread(buffer_, 1, size_, f);
+      fclose(f);
       return true;
     } else {
       return false;
@@ -108,10 +108,10 @@ bool MappedFile::Flush() {
     if (!read_write_)
       return true;
     // write buffer to disk
-    int fd = open(file_name_.c_str(), O_WRONLY | O_TRUNC);
-    if (fd != -1) {
-      write(fd, (char *) buffer_, size_);
-      close(fd);
+    FILE* f = fopen(file_name_.c_str(), "w");
+    if (f) {
+      fwrite(buffer_, 1, size_, f);
+      fclose(f);
       return true;
     } else {
       return false;
