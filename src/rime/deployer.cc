@@ -59,13 +59,19 @@ bool Deployer::ScheduleTask(const string& task_name, TaskInitializer arg) {
   return true;
 }
 
+#ifndef __EMSCRIPTEN__
+#define LOCK std::lock_guard<std::mutex> lock(mutex_)
+#else
+#define LOCK do { } while (0)
+#endif
+
 void Deployer::ScheduleTask(an<DeploymentTask> task) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  LOCK;
   pending_tasks_.push(task);
 }
 
 an<DeploymentTask> Deployer::NextTask() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  LOCK;
   if (!pending_tasks_.empty()) {
     auto result = pending_tasks_.front();
     pending_tasks_.pop();
@@ -77,7 +83,7 @@ an<DeploymentTask> Deployer::NextTask() {
 }
 
 bool Deployer::HasPendingTasks() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  LOCK;
   return !pending_tasks_.empty();
 }
 
@@ -104,6 +110,7 @@ bool Deployer::Run() {
   return !failure;
 }
 
+#ifndef __EMSCRIPTEN__
 bool Deployer::StartWork(bool maintenance_mode) {
   if (IsWorking()) {
     LOG(WARNING) << "a work thread is already running.";
@@ -142,6 +149,7 @@ void Deployer::JoinWorkThread() {
 void Deployer::JoinMaintenanceThread() {
   JoinWorkThread();
 }
+#endif
 
 string Deployer::user_data_sync_dir() const {
   return (boost::filesystem::path(sync_dir) / user_id).string();

@@ -7,8 +7,11 @@
 #ifndef RIME_DEPLOYER_H_
 #define RIME_DEPLOYER_H_
 
+#ifndef __EMSCRIPTEN__
 #include <future>
 #include <mutex>
+#endif
+
 #include <queue>
 #include <boost/any.hpp>
 #include <rime/common.h>
@@ -55,6 +58,7 @@ class Deployer : public Messenger {
   bool HasPendingTasks();
 
   bool Run();
+#ifndef __EMSCRIPTEN__
   bool StartWork(bool maintenance_mode = false);
   bool StartMaintenance();
   bool IsWorking();
@@ -62,13 +66,35 @@ class Deployer : public Messenger {
   // the following two methods equally wait until all threads are joined
   void JoinWorkThread();
   void JoinMaintenanceThread();
+#else
+  // Multi-thread support for emscripten is disabled for simplicity and performance
+  bool is_working;
+  bool StartWork(bool maintenance_mode = false) {
+    maintenance_mode_ = maintenance_mode;
+    is_working = true;
+    bool ok = Run();
+    is_working = false;
+    return ok;
+  }
+  bool StartMaintenance() {
+    return StartWork(true);
+  }
+  bool IsWorking() {
+    return is_working;
+  }
+  bool IsMaintenanceMode() { return maintenance_mode_; }
+  void JoinWorkThread() {}
+  void JoinMaintenanceThread() {}
+#endif
 
   string user_data_sync_dir() const;
 
  private:
   std::queue<of<DeploymentTask>> pending_tasks_;
+#ifndef __EMSCRIPTEN__
   std::mutex mutex_;
   std::future<void> work_;
+#endif
   bool maintenance_mode_ = false;
 };
 
