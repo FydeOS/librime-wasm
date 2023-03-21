@@ -10,6 +10,7 @@
 #include <rime/dict/dict_settings.h>
 #include <rime/dict/entry_collector.h>
 #include <rime/dict/preset_vocabulary.h>
+#include "rime/file_api.h"
 
 namespace rime {
 
@@ -57,7 +58,8 @@ void EntryCollector::LoadPresetVocabulary(DictSettings* settings) {
 void EntryCollector::Collect(const string& dict_file) {
   LOG(INFO) << "collecting entries from " << dict_file;
   // read table
-  std::ifstream fin(dict_file.c_str());
+  BufferedFileReader reader(dict_file);
+  std::istream fin(&reader);
   DictSettings settings;
   if (!settings.LoadDictHeader(fin)) {
     LOG(ERROR) << "missing dict settings.";
@@ -121,7 +123,6 @@ void EntryCollector::Collect(const string& dict_file) {
       stems[word].insert(stem_str);
     }
   }
-  fin.close();
   LOG(INFO) << "Pass 1: total " << num_entries << " entries collected.";
   LOG(INFO) << "num unique syllables: " << syllabary.size();
   LOG(INFO) << "num of entries to encode: " << encode_queue.size();

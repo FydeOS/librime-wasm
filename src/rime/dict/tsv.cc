@@ -9,13 +9,15 @@
 #include <rime/common.h>
 #include <rime/dict/db_utils.h>
 #include <rime/dict/tsv.h>
+#include "rime/file_api.h"
 
 namespace rime {
 
 int TsvReader::operator() (Sink* sink) {
   if (!sink) return 0;
   LOG(INFO) << "reading tsv file: " << path_;
-  std::ifstream fin(path_.c_str());
+  BufferedFileReader buf_file(path_);
+  std::istream fin(&buf_file);
   string line, key, value;
   Tsv row;
   int line_no = 0;
@@ -53,7 +55,6 @@ int TsvReader::operator() (Sink* sink) {
     }
     ++num_entries;
   }
-  fin.close();
   return num_entries;
 }
 
