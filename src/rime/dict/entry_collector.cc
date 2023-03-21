@@ -145,7 +145,7 @@ void EntryCollector::Finish() {
       if (collection.find(phrase) != collection.end())
         continue;
       if (!encoder->EncodePhrase(phrase, weight_str)) {
-        LOG(WARNING) << "Encode failure: '" << phrase << "'.";
+        DLOG(WARNING) << "Encode failure: '" << phrase << "'.";
       }
     }
   }
@@ -200,7 +200,7 @@ void EntryCollector::CreateEntry(const string &word,
   bool is_word = (e.raw_code.size() == 1);
   if (is_word) {
     if (words[e.text].find(code_str) != words[e.text].end()) {
-      LOG(WARNING) << "duplicate word definition '"
+      DLOG(WARNING) << "duplicate word definition '"
                    << e.text << "': [" << code_str << "].";
       return;
     }
