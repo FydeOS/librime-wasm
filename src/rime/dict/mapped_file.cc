@@ -72,9 +72,15 @@ bool MappedFile::OpenReadOnly() {
   buffer_ = static_cast<uint8_t *>(malloc(s));
   if (buffer_) {
     buffer_size_ = size_ = s;
-    std::ifstream file(file_name_, std::ios::binary);
-    file.read((char*)buffer_, size_);
     read_write_ = false;
+    int fd = open(file_name_.c_str(), O_RDONLY | O_TRUNC);
+    if (fd != -1) {
+      read(fd, (char*)buffer_, size_);
+      close(fd);
+      return true;
+    } else {
+      return false;
+    }
   }
   return bool(buffer_);
 }
@@ -102,9 +108,14 @@ bool MappedFile::Flush() {
     if (!read_write_)
       return true;
     // write buffer to disk
-    std::ofstream file(file_name_, std::ios::binary | std::ios::trunc);
-    file.write((char*)buffer_, size_);
-    return file.good();
+    int fd = open(file_name_.c_str(), O_WRONLY | O_TRUNC);
+    if (fd != -1) {
+      write(fd, (char *) buffer_, size_);
+      close(fd);
+      return true;
+    } else {
+      return false;
+    }
   }
   return false;
 }
