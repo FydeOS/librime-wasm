@@ -8,13 +8,6 @@
 #ifndef RIME_API_H_
 #define RIME_API_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include <stddef.h>
-#include <stdint.h>
-
 #if defined(_WIN32)
 #if defined(RIME_EXPORTS)
 /* DLL export */
@@ -26,9 +19,21 @@ extern "C" {
 /* static library */
 #define RIME_API
 #endif
-#else  /* _WIN32 */
+#elif defined(__EMSCRIPTEN__)
+// This must be defined outside of extern "C" block
+#include <emscripten.h>
+#define RIME_API EMSCRIPTEN_KEEPALIVE
+#else
 #define RIME_API
 #endif  /* _WIN32 */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stddef.h>
+#include <stdint.h>
+
 
 typedef uintptr_t RimeSessionId;
 
@@ -340,6 +345,12 @@ RIME_API Bool RimeConfigUpdateSignature(RimeConfig* config, const char* signer);
 // Testing
 
 RIME_API Bool RimeSimulateKeySequence(RimeSessionId session_id, const char *key_sequence);
+
+#ifdef __EMSCRIPTEN__
+// Only export functions
+#undef RIME_API
+#define RIME_API
+#endif
 
 // Module
 
