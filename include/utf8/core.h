@@ -353,7 +353,6 @@ namespace internal
     }
 } // namespace utf8
 
-
 #endif // header guard
 
 

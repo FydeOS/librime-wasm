@@ -4,14 +4,8 @@
 #include <cstdio>
 #include <exception>
 #include <new>
-#include "exception.h"
 
 #define DARTS_VERSION "0.32"
-
-#ifndef RIME_HAVE_EXCEPTION
-#define try
-#define catch(...) while(false)
-#endif
 
 // DARTS_THROW() throws a <Darts::Exception> whose message starts with the
 // file name and the line number. For example, DARTS_THROW("error message") at
@@ -21,7 +15,7 @@
 #define DARTS_INT_TO_STR(value) #value
 #define DARTS_LINE_TO_STR(line) DARTS_INT_TO_STR(line)
 #define DARTS_LINE_STR DARTS_LINE_TO_STR(__LINE__)
-#define DARTS_THROW(msg) RIME_throw<Darts::Details::Exception>( \
+#define DARTS_THROW(msg) throw Darts::Details::Exception( \
   __FILE__ ":" DARTS_LINE_STR ": exception: " msg)
 
 namespace Darts {
@@ -359,16 +353,12 @@ int DoubleArrayImpl<A, B, T, C>::open(const char *file_name,
 
   size /= unit_size();
   unit_type *buf;
-#ifdef RIME_HAVE_EXCEPTION
   try {
-#endif
     buf = new unit_type[size];
-#ifdef RIME_HAVE_EXCEPTION
   } catch (const std::bad_alloc &) {
     std::fclose(file);
     DARTS_THROW("failed to open double-array: std::bad_alloc");
   }
-#endif
 
   if (std::fread(buf, unit_size(), size, file) != size) {
     std::fclose(file);
@@ -1904,10 +1894,5 @@ int DoubleArrayImpl<A, B, T, C>::build(std::size_t num_keys,
 #undef DARTS_LINE_TO_STR
 #undef DARTS_LINE_STR
 #undef DARTS_THROW
-
-#ifndef RIME_HAVE_EXCEPTION
-#undef try
-#undef catch
-#endif
 
 #endif  // DARTS_H_

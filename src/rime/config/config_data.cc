@@ -31,18 +31,14 @@ bool ConfigData::LoadFromStream(std::istream& stream) {
     LOG(ERROR) << "failed to load config from stream.";
     return false;
   }
-#ifdef RIME_HAVE_EXCEPTION
   try {
-#endif
     YAML::Node doc = YAML::Load(stream);
     root = ConvertFromYaml(doc, nullptr);
-#ifdef RIME_HAVE_EXCEPTION
   }
   catch (YAML::Exception& e) {
     LOG(ERROR) << "Error parsing YAML: " << e.what();
     return false;
   }
-#endif
   return true;
 }
 
@@ -51,18 +47,14 @@ bool ConfigData::SaveToStream(std::ostream& stream) {
     LOG(ERROR) << "failed to save config to stream.";
     return false;
   }
-#ifdef RIME_HAVE_EXCEPTION
   try {
-#endif
     YAML::Emitter emitter(stream);
     EmitYaml(root, &emitter, 0);
-#ifdef RIME_HAVE_EXCEPTION
   }
   catch (YAML::Exception& e) {
     LOG(ERROR) << "Error emitting YAML: " << e.what();
     return false;
   }
-#endif
   return true;
 }
 
@@ -77,18 +69,14 @@ bool ConfigData::LoadFromFile(const string& file_name,
     return false;
   }
   LOG(INFO) << "loading config file '" << file_name << "'.";
-#ifdef RIME_HAVE_EXCEPTION
   try {
-#endif
     YAML::Node doc = YAML::LoadFile(file_name);
     root = ConvertFromYaml(doc, compiler);
-#ifdef RIME_HAVE_EXCEPTION
   }
   catch (YAML::Exception& e) {
     LOG(ERROR) << "Error parsing YAML: " << e.what();
     return false;
   }
-#endif
   return true;
 }
 

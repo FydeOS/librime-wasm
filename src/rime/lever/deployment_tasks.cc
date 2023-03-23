@@ -35,23 +35,17 @@ namespace fs = boost::filesystem;
 namespace rime {
 
 DetectModifications::DetectModifications(TaskInitializer arg) {
-#ifdef RIME_HAVE_EXCEPTION
   try {
-#endif
     data_dirs_ = boost::any_cast<vector<string>>(arg);
-#ifdef RIME_HAVE_EXCEPTION
   }
   catch (const boost::bad_any_cast&) {
     LOG(ERROR) << "DetectModifications: invalid arguments.";
   }
-#endif
 }
 
 bool DetectModifications::Run(Deployer* deployer) {
   time_t last_modified = 0;
-#ifdef RIME_HAVE_EXCEPTION
   try {
-#endif
     for (auto dir : data_dirs_) {
       fs::path p = fs::canonical(dir);
       last_modified = (std::max)(last_modified, fs::last_write_time(p));
@@ -67,12 +61,10 @@ bool DetectModifications::Run(Deployer* deployer) {
         }
       }
     }
-#ifdef RIME_HAVE_EXCEPTION
   } catch(const fs::filesystem_error& ex) {
     LOG(ERROR) << "Error reading file information: " << ex.what();
     return true;
   }
-#endif
 
   // TODO: store as 64-bit number to avoid the year 2038 problem
   int last_build_time = 0;
@@ -263,16 +255,12 @@ bool WorkspaceUpdate::Run(Deployer* deployer) {
 }
 
 SchemaUpdate::SchemaUpdate(TaskInitializer arg) : verbose_(false) {
-#ifdef RIME_HAVE_EXCEPTION
   try {
-#endif
     schema_file_ = boost::any_cast<string>(arg);
-#ifdef RIME_HAVE_EXCEPTION
   }
   catch (const boost::bad_any_cast&) {
     LOG(ERROR) << "SchemaUpdate: invalid arguments.";
   }
-#endif
 }
 
 static bool MaybeCreateDirectory(fs::path dir) {
@@ -396,18 +384,14 @@ bool SchemaUpdate::Run(Deployer* deployer) {
 }
 
 ConfigFileUpdate::ConfigFileUpdate(TaskInitializer arg) {
-#ifdef RIME_HAVE_EXCEPTION
   try {
-#endif
     auto p = boost::any_cast<pair<string, string>>(arg);
     file_name_ = p.first;
     version_key_ = p.second;
-#ifdef RIME_HAVE_EXCEPTION
   }
   catch (const boost::bad_any_cast&) {
     LOG(ERROR) << "ConfigFileUpdate: invalid arguments.";
   }
-#endif
 }
 
 static bool ConfigNeedsUpdate(Config* config) {
@@ -504,9 +488,7 @@ bool SymlinkingPrebuiltDictionaries::Run(Deployer* deployer) {
        test != end; ++test) {
     fs::path entry(test->path());
     if (fs::is_symlink(entry)) {
-#ifdef RIME_HAVE_EXCEPTION
       try {
-#endif
         // a symlink becomes dangling if the target file is no longer provided
         boost::system::error_code ec;
         auto target_path = fs::canonical(entry, ec);
@@ -519,13 +501,11 @@ bool SymlinkingPrebuiltDictionaries::Run(Deployer* deployer) {
           LOG(INFO) << "removing symlink: " << entry.filename().string();
           fs::remove(entry);
         }
-#ifdef RIME_HAVE_EXCEPTION
       }
       catch (const fs::filesystem_error& ex) {
         LOG(ERROR) << entry << ": " << ex.what();
         success = false;
       }
-#endif
     }
   }
   return success;
@@ -679,9 +659,7 @@ bool CleanOldLogFiles::Run(Deployer* deployer) {
     for (fs::directory_iterator j(*i), end; j != end; ++j) {
       fs::path entry(j->path());
       string file_name(entry.filename().string());
-#ifdef RIME_HAVE_EXCEPTION
       try {
-#endif
         if (fs::is_regular_file(entry) &&
             !fs::is_symlink(entry) &&
             boost::starts_with(file_name, "rime.") &&
@@ -690,13 +668,11 @@ bool CleanOldLogFiles::Run(Deployer* deployer) {
           fs::remove(entry);
           ++removed;
         }
-#ifdef RIME_HAVE_EXCEPTION
       }
       catch (const fs::filesystem_error& ex) {
         LOG(ERROR) << ex.what();
         success = false;
       }
-#endif
     }
   }
   if (removed != 0) {
