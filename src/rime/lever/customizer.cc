@@ -92,15 +92,19 @@ bool Customizer::UpdateConfigFile() {
 
   bool is_dirty = !applied_customization.empty();
   if (redistribute || (is_dirty && !missing_original_copy)) {
+#ifdef RIME_HAVE_EXCEPTION
     try {
+#endif
       fs::copy_file(source_path_, dest_path_,
                     fs::copy_option::overwrite_if_exists);
+#ifdef RIME_HAVE_EXCEPTION
     }
     catch (...) {
       LOG(ERROR) << "Error copying config file '"
                  << source_path_.string() << "' to user directory.";
       return false;
     }
+#endif
   }
   if (!customization.empty()) {
     if (missing_original_copy) {

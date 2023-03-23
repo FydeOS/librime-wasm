@@ -8,6 +8,7 @@
 #include <fstream>
 #include <rime/algo/algebra.h>
 #include <rime/algo/calculus.h>
+#include <exception.h>
 
 namespace rime {
 
@@ -78,12 +79,16 @@ bool Projection::Load(an<ConfigList> settings) {
     }
     const string &formula(v->str());
     an<Calculation> x;
+#ifdef RIME_HAVE_EXCEPTION
     try {
+#endif
       x.reset(calc.Parse(formula));
+#ifdef RIME_HAVE_EXCEPTION
     }
     catch (boost::regex_error& e) {
       LOG(ERROR) << "Error parsing formula '" << formula << "': " << e.what();
     }
+#endif
     if (!x) {
       LOG(ERROR) << "Error loading spelling algebra definition #" << (i + 1)
                  << ": '" << formula << "'.";
@@ -104,14 +109,18 @@ bool Projection::Apply(string* value) {
   bool modified = false;
   Spelling s(*value);
   for (an<Calculation>& x : calculation_) {
+#ifdef RIME_HAVE_EXCEPTION
     try {
+#endif
       if (x->Apply(&s))
         modified = true;
+#ifdef RIME_HAVE_EXCEPTION
     }
     catch (std::runtime_error& e) {
       LOG(ERROR) << "Error applying calculation: " << e.what();
       return false;
     }
+#endif
   }
   if (modified)
     value->assign(s.str);
@@ -130,13 +139,17 @@ bool Projection::Apply(Script* value) {
     for (const Script::value_type& v : *value) {
       Spelling s(v.first);
       bool applied = false;
+#ifdef RIME_HAVE_EXCEPTION
       try {
+#endif
         applied = x->Apply(&s);
+#ifdef RIME_HAVE_EXCEPTION
       }
       catch (std::runtime_error& e) {
         LOG(ERROR) << "Error applying calculation: " << e.what();
         return false;
       }
+#endif
       if (applied) {
         modified = true;
         if (!x->deletion()) {

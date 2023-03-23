@@ -9,6 +9,7 @@
 #include <boost/lexical_cast.hpp>
 #include <rime/config/config_data.h>
 #include <rime/config/config_types.h>
+#include <exception.h>
 
 namespace rime {
 
@@ -67,24 +68,32 @@ bool ConfigValue::GetInt(int* value) const {
     }
   }
   // decimal
+#ifdef RIME_HAVE_EXCEPTION
   try {
+#endif
     *value = boost::lexical_cast<int>(value_);
+#ifdef RIME_HAVE_EXCEPTION
   }
   catch (...) {
     return false;
   }
+#endif
   return true;
 }
 
 bool ConfigValue::GetDouble(double* value) const {
   if (!value || value_.empty())
     return false;
+#ifdef RIME_HAVE_EXCEPTION
   try {
+#endif
     *value = boost::lexical_cast<double>(value_);
+#ifdef RIME_HAVE_EXCEPTION
   }
   catch (...) {
     return false;
   }
+#endif
   return true;
 }
 

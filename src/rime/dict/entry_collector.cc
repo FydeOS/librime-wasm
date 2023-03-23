@@ -165,24 +165,32 @@ void EntryCollector::CreateEntry(const string &word,
   }
   if (scaled) {
     double percentage = 100.0;
+#ifdef RIME_HAVE_EXCEPTION
     try {
+#endif
       percentage = boost::lexical_cast<double>(
           weight_str.substr(0, weight_str.length() - 1));
+#ifdef RIME_HAVE_EXCEPTION
     }
     catch (...) {
       LOG(WARNING) << "invalid entry definition at #" << num_entries << ".";
       percentage = 100.0;
     }
+#endif
     e.weight *= percentage / 100.0;
   }
   else if (!weight_str.empty()) {  // absolute weight
+#ifdef RIME_HAVE_EXCEPTION
     try {
+#endif
       e.weight = boost::lexical_cast<double>(weight_str);
+#ifdef RIME_HAVE_EXCEPTION
     }
     catch (...) {
       LOG(WARNING) << "invalid entry definition at #" << num_entries << ".";
       e.weight = 0.0;
     }
+#endif
   }
   // learn new syllables, or check if syllables are in the fixed syllabary.
   for (const string& s : e.raw_code) {
