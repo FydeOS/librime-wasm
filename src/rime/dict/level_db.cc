@@ -5,6 +5,8 @@
 // 2014-12-04 Chen Gong <chen.sst@gmail.com>
 //
 
+#ifndef __EMSCRIPTEN__
+
 #include <boost/filesystem.hpp>
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
@@ -356,3 +358,5 @@ UserDbWrapper<LevelDb>::UserDbWrapper(const string& file_name,
 }
 
 }  // namespace rime
+
+#endif
