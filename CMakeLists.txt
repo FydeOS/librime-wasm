@@ -110,9 +110,11 @@ if(YamlCpp_FOUND)
   include_directories(${YamlCpp_INCLUDE_PATH})
 endif()
 
-find_package(LevelDb REQUIRED)
-if(LevelDb_FOUND)
+if(NOT EMSCRIPTEN)
+  find_package(LevelDb REQUIRED)
+  if(LevelDb_FOUND)
     include_directories(${LevelDb_INCLUDE_PATH})
+  endif()
 endif()
 
 find_package(Marisa REQUIRED)
