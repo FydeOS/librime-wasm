@@ -69,9 +69,32 @@ void boost::throw_exception(std::exception const & e, boost::source_location con
 
 using namespace emscripten;
 
+// Get char index from byte index in a utf8 string
+static int ConvertUtf8Index(const char* str, int b_idx) {
+  int c;
+  int cur_idx = 0;
+  int chr_idx = 0;
+  while (cur_idx < b_idx) {
+    c = str[cur_idx];
+    if ((c & 0x80) == 0) {
+      cur_idx += 1;
+    } else if ((c & 0xE0) == 0xC0) {
+      cur_idx += 2;
+    } else if ((c & 0xF0) == 0xE0) {
+      cur_idx += 3;
+    } else if ((c & 0xF8) == 0xF0) {
+      cur_idx += 4;
+    }
+    chr_idx++;
+  }
+  return chr_idx;
+}
+
 struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSession> {
   RimeSessionId sessionId;
-  CRimeSession() { }
+  CRimeSession() {
+    sessionId = 0;
+  }
 
   void Initialize() {
     if (!sessionId) {
@@ -103,28 +126,28 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
 
     v.set("composition", val::object());
     v["composition"].set("length",context.composition.length);
-    v["composition"].set("cursor_pos", context.composition.cursor_pos);
-    v["composition"].set("sel_start", context.composition.sel_start);
-    v["composition"].set("sel_end", context.composition.sel_end);
+    v["composition"].set("cursorPosition", ConvertUtf8Index(context.composition.preedit, context.composition.cursor_pos));
+    v["composition"].set("selectionStart", ConvertUtf8Index(context.composition.preedit, context.composition.sel_start));
+    v["composition"].set("selectionEnd", ConvertUtf8Index(context.composition.preedit, context.composition.sel_end));
     v["composition"].set("preedit", val::u8string(context.composition.preedit));
 
     v.set("menu", val::object());
-    v["menu"].set("page_size", context.menu.page_size);
-    v["menu"].set("page_no", context.menu.page_no);
-    v["menu"].set("is_last_page", (bool)context.menu.is_last_page);
-    v["menu"].set("highlighted_candidate_index", (bool)context.menu.highlighted_candidate_index);
+    v["menu"].set("pageSize", context.menu.page_size);
+    v["menu"].set("pageNumber", context.menu.page_no);
+    v["menu"].set("isLastPage", (bool)context.menu.is_last_page);
+    v["menu"].set("highlightedCandidateIndex", context.menu.highlighted_candidate_index);
     v["menu"].set("candidates", val::array());
     for (int i = 0; i < context.menu.num_candidates; i++) {
       v["menu"]["candidates"].set(i, val::object());
       v["menu"]["candidates"][i].set("text", val::u8string(context.menu.candidates[i].text));
       v["menu"]["candidates"][i].set("comment", val::u8string(context.menu.candidates[i].comment));
     }
-    v["menu"].set("select_keys", val::u8string(context.menu.select_keys));
+    v["menu"].set("selectKeys", val::u8string(context.menu.select_keys));
 
-    v.set("commit_text_preview", val::u8string(context.commit_text_preview));
-    v.set("select_labels", val::array());
+    v.set("commitTextPreview", val::u8string(context.commit_text_preview));
+    v.set("selectLabels", val::array());
     for (int i = 0; i < context.menu.page_size; i++) {
-      v["select_labels"].set(i, val::u8string(context.select_labels[i]));
+      v["selectLabels"].set(i, val::u8string(context.select_labels[i]));
     }
 
     RimeFreeContext(&context);
@@ -151,15 +174,15 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
       return val::null();
     }
     auto v =  val::object();
-    v.set("schema_id", val::u8string(status.schema_id));
-    v.set("schema_name", val::u8string(status.schema_name));
-    v.set("is_disabled", bool(status.is_disabled));
-    v.set("is_composing", bool(status.is_composing));
-    v.set("is_ascii_mode", bool(status.is_ascii_mode));
-    v.set("is_full_shape", bool(status.is_full_shape));
-    v.set("is_simplified", bool(status.is_simplified));
-    v.set("is_traditional", bool(status.is_traditional));
-    v.set("is_ascii_punct", bool(status.is_ascii_punct));
+    v.set("schemaId", val::u8string(status.schema_id));
+    v.set("schemaName", val::u8string(status.schema_name));
+    v.set("isDisabled", bool(status.is_disabled));
+    v.set("isComposing", bool(status.is_composing));
+    v.set("isAsciiMode", bool(status.is_ascii_mode));
+    v.set("isFullShape", bool(status.is_full_shape));
+    v.set("isSimplified", bool(status.is_simplified));
+    v.set("isTraditional", bool(status.is_traditional));
+    v.set("isAsciiPunct", bool(status.is_ascii_punct));
     RimeFreeStatus(&status);
     return v;
   }
