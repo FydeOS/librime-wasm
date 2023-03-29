@@ -8,6 +8,7 @@
 #include <emscripten.h>
 #include <emscripten/val.h>
 #include <rime/common.h>
+#include <map>
 
 using emscripten::EM_VAL;
 using emscripten::val;
@@ -21,7 +22,7 @@ namespace rime {
       db_name = "rime_leveldb_" + UTF8ToString(db_name);
       db = await Module.idb.openDB(db_name, 1, {
         upgrade(db, oldVersion, newVersion, transaction, event) {
-          db.createObjectStore('values');
+          db.createObjectStore('values', {keyPath: "key"});
         },
         terminated() {
         },
@@ -61,10 +62,20 @@ namespace rime {
       key = UTF8ToString(key);
       const result = await db.get('values', key);
       if (result != undefined) {
-        return allocateUTF8(result);
+        return allocateUTF8(result.value);
       } else {
         return 0;
       }
+    } catch (e) {
+      return 0;
+    }
+  })
+
+  EM_ASYNC_JS(EM_VAL, js_idb_get_all, (EM_VAL db_handle), {
+    try {
+      const db = Emval.toValue(db_handle);
+      const result = await db.getAll('values');
+      return Emval.toHandle(result);
     } catch (e) {
       return 0;
     }
@@ -76,7 +87,7 @@ namespace rime {
       key = UTF8ToString(key);
       if (value != 0) {
         value = UTF8ToString(value);
-        await db.put('values', value, key);
+        await db.put('values', { key: key, value: value });
       } else {
         await db.delete('values', key);
       }
@@ -87,40 +98,14 @@ namespace rime {
     }
   })
 
-  EM_ASYNC_JS(bool, js_idb_tx_put, (EM_VAL tx_handle, const char* key, const char* value), {
-    try {
-      const tx = Emval.toValue(tx_handle);
-      key = UTF8ToString(key);
-      if (value != 0) {
-        value = UTF8ToString(value);
-        tx.op.push({type: 'put', key: key, value: value});
-      } else {
-        tx.op.push({type: 'del', key: key});
-      }
-      return true;
-    } catch (e) {
-      out(e);
-      return false;
-    }
-  })
-
-  EM_JS(EM_VAL, js_idb_create_transaction, (EM_VAL db_handle, bool readonly), {
+  EM_ASYNC_JS(bool, js_idb_commit_transaction, (EM_VAL db_handle, EM_VAL tx_handle), {
     try {
       const db = Emval.toValue(db_handle);
-      return Emval.toHandle({db: db, op: []});
-    } catch (e) {
-      out(e);
-      return null;
-    }
-  })
-
-  EM_ASYNC_JS(bool, js_idb_commit_transaction, (EM_VAL tx_handle), {
-    try {
       const txContent = Emval.toValue(tx_handle);
-      const tx = txContent.db.transaction('values', 'readwrite');
-      for (let op of txContent.op) {
+      const tx = db.transaction('values', 'readwrite');
+      for (let op of txContent) {
         if (op.type == 'put') {
-          tx.store.put(op.value, op.key);
+          tx.store.put({value: op.value, key: op.key});
         } else if (op.type == 'del') {
           tx.store.del(op.key);
         }
@@ -134,13 +119,7 @@ namespace rime {
     }
   })
 
-  EM_JS(void, js_idb_abort_transaction, (EM_VAL tx_handle), {
-    try {
-    } catch (e) {
-      out(e);
-    }
-  })
-
+  /*
   EM_ASYNC_JS(EM_VAL, js_idb_create_cursor, (EM_VAL db_handle), {
     try {
       const db = Emval.toValue(db_handle);
@@ -179,42 +158,53 @@ namespace rime {
       return null;
     }
   })
+   */
 
 
   struct JsIndexedDbWrapper : std::enable_shared_from_this<JsIndexedDbWrapper> {
     emscripten::val db_handle;
-    emscripten::val tx_handle;
+    std::map<string, string> data;
+    struct operation {
+      bool put;
+      string key;
+      string value;
+    };
+    std::vector<operation> current_transaction;
     bool readonly_;
   private:
     EM_VAL db() {
       return db_handle.as_handle();
     }
-    EM_VAL tx() {
-      return tx_handle.as_handle();
-    }
-
   public:
 
     bool Open(const string& file_name, bool readonly) {
       auto v = js_idb_open(file_name.c_str());
       db_handle = val::take_ownership(v);
       readonly_ = readonly;
-      return db_handle.as_handle() != nullptr;
+      if (!db_handle.isNull()) {
+        data.clear();
+        // read all data to map
+        auto all_val = val::take_ownership(js_idb_get_all(db()));
+        int len = all_val["length"].as<int>();
+        for (int i = 0; i < len; i++) {
+          val obj = all_val[i];
+          data[obj["key"].as<string>()] = obj["value"].as<string>();
+        }
+        return true;
+      }
+      return false;
     }
 
     void Release() {
       js_idb_close(db());
-    }
-
-    val CreateCursor() {
-      return val::take_ownership(js_idb_create_cursor(db()));
+      data.clear();
+      current_transaction.clear();
     }
 
     bool Fetch(const string& key, string* value) {
-      char* p = js_idb_get(db(), key.c_str());
-      if (p) {
-        *value = string(p);
-        free(p);
+      auto find_result = data.find(key);
+      if (find_result != data.end()) {
+        *value = find_result->second;
         return true;
       } else {
         return false;
@@ -223,31 +213,52 @@ namespace rime {
 
     bool Update(const string& key, const string& value, bool write_batch) {
       if (write_batch) {
-        return js_idb_tx_put(tx(), key.c_str(), value.c_str());
+        current_transaction.push_back({true, key, value});
+        return true;
       } else {
+        data[key] = value;
         return js_idb_put(db(), key.c_str(), value.c_str());
       }
     }
 
     bool Erase(const string& key, bool write_batch) {
       if (write_batch) {
-        return js_idb_tx_put(tx(), key.c_str(), nullptr);
+        current_transaction.push_back({false, key});
+        return true;
       } else {
+        data.erase(key);
         return js_idb_put(db(), key.c_str(), nullptr);
       }
     }
 
     void CreateTransaction() {
-      auto v = js_idb_create_transaction(db(), readonly_);
-      tx_handle = val::take_ownership(v);
+      current_transaction.clear();
     }
 
     void AbortTransaction() {
-      tx_handle = val::null();
+      current_transaction.clear();
     }
 
     bool CommitTransaction() {
-      return js_idb_commit_transaction(tx_handle.as_handle());
+      if (current_transaction.empty())
+        return true;
+      val tx_info = val::array();
+      for (int i = 0; i < current_transaction.size(); i++) {
+        val cur_tx = val::object();
+        string& key = current_transaction[i].key;
+        string& val = current_transaction[i].value;
+        if (current_transaction[i].put) {
+          cur_tx.set("type", "put");
+          data[key] = val;
+        } else {
+          cur_tx.set("type", "del");
+          data.erase(key);
+        }
+        cur_tx.set("key", key);
+        cur_tx.set("value", val);
+        tx_info.set(i, cur_tx);
+      }
+      return js_idb_commit_transaction(db(), tx_info.as_handle());
     }
   };
 
@@ -255,69 +266,35 @@ namespace rime {
 
   private:
     an<JsIndexedDbWrapper> db_;
-    val cursor;
+    std::map<string, string>::const_iterator cursor;
     std::string last_pos;
-    EM_VAL handle() const {
-      return cursor.as_handle();
-    }
 
   public:
     JsIndexedDbCursor(an<JsIndexedDbWrapper> db) : db_(db) {
-      Release();
     }
 
     bool IsValid() const {
-      return !cursor.isNull();
+      return cursor != db_->data.cend();
     }
 
     string GetKey() const {
-      char* buf = js_idb_cursor_get_val(handle(), false);
-      string result(buf);
-      free(buf);
-      return result;
+      return cursor->first;
     }
 
     string GetValue() const {
-      char* buf = js_idb_cursor_get_val(handle(), true);
-      string result(buf);
-      free(buf);
-      return result;
+      return cursor->second;
     }
 
     void Next() {
-      if (!IsValid()) {
-        LOG(WARNING) << "Attempt to call next() when ptr is invalid";
-        return;
-      }
-      bool ok = js_idb_cursor_continue(handle(), nullptr);
-      if (!ok) {
-        cursor = val::null();
-      } else {
-        last_pos = GetKey();
-      }
+      cursor = std::next(cursor);
     }
 
     void Jump(const string& key) {
-      if (key.compare(last_pos) <= 0) {
-        cursor = db_->CreateCursor();
-      } else {
-        if (cursor.isNull()) {
-          // e.g. last item of database is "b", querying "bb" will make cursor null, then querying "bba" will reach here.
-          // if querying "a" after querying "bb", cursor will be rebuilt above
-          return;
-        }
-      }
-      bool ok = js_idb_cursor_continue(handle(), key.c_str());
-      if (!ok) {
-        cursor = val::null();
-      } else {
-        last_pos = GetKey();
-      }
+      cursor = db_->data.lower_bound(key);
     }
 
-    void Release() {
-      cursor = val::null();
-      last_pos = "\xFF\xFF";
+    void Reset() {
+      cursor = db_->data.cbegin();
     }
   };
 
@@ -334,13 +311,13 @@ namespace rime {
   }
 
   JsIndexedDbAccessor::~JsIndexedDbAccessor() {
-    cursor_->Release();
   }
 
   bool JsIndexedDbAccessor::Reset() {
-    cursor_->Release();
     if (prefix_ != "") {
       cursor_->Jump(prefix_);
+    } else {
+      Reset();
     }
     return cursor_->IsValid();
   }
