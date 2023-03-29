@@ -22,55 +22,18 @@
 
 EM_ASYNC_JS(int, js_getFileSize, (const char *path), {
   try {
-    path = UTF8ToString(path);
-    const details = await Module.fs.readFile(path);
-    return details.blobs.map(b => b.size).reduce((partialSum, a) => partialSum + a, 0);
+    const pathStr = UTF8ToString(path);
+    return await Module.fsc.getFileSize(pathStr);
   } catch (e) {
     out(e);
     return -5;
   }
 })
 
-// { blobs: [ { id: 12345, size: 10 } ], mtime: xxx, mode: 0777 }
 EM_ASYNC_JS(int, js_setFileSize, (const char* path, uint32_t size), {
   try {
-    path = UTF8ToString(path);
-    let curFile;
-    if (await Module.fs.exists(path)) {
-      curFile = await Module.fs.readFile(path);
-    } else {
-      curFile = { blobs: [], mtime: 0, mode: 0o777 };
-    }
-    const curBlobs = curFile.blobs;
-    let newBlobs = [];
-    let seek = 0;
-    let i;
-    for (i = 0; i < curBlobs.length; i++) {
-      let curBlob = curBlobs[i];
-      if (size >= seek + curBlob.size) {
-        // not arrived yet
-        newBlobs.push(curBlob);
-      } else {
-        const preserve = size - seek;
-        if (preserve > 0) {
-          const cutBlobData = await Module.readBlob(curBlob).subarray(0, preserve);
-          const cutBlob = await Module.createBlob(cutBlobData);
-          newBlobs.push(cutBlob);
-        }
-        break;
-      }
-      seek += curBlob.size;
-    }
-
-    if (seek < size) {
-      let stubData = new ArrayBuffer(size - seek);
-      const stubBlob = await Module.createBlob(stubData);
-      newBlobs.push(stubBlob);
-    }
-
-    curFile.blobs = newBlobs;
-    curFile.mtime = new Date().getTime();
-    await Module.fs.writeFile(path, curFile);
+    const pathStr = UTF8ToString(path);
+    await Module.fsc.setFileSize(pathStr, size);
     return 0;
   } catch (e) {
     out(e);
@@ -80,59 +43,9 @@ EM_ASYNC_JS(int, js_setFileSize, (const char* path, uint32_t size), {
 
 EM_ASYNC_JS(int, js_writeFile, (const char* path, const uint8_t* dat, uint32_t len, uint32_t pos), {
   try {
-    path = UTF8ToString(path);
+    const pathStr = UTF8ToString(path);
     const data = HEAPU8.subarray(dat, dat + len);
-    let curFile;
-    if (await Module.fs.exists(path)) {
-      curFile = await Module.fs.readFile(path);
-    } else {
-      curFile = { blobs: [], mtime: 0, mode: 0o777 };
-    }
-    const curBlobs = curFile.blobs;
-    let newBlobs = [];
-    let seek = 0;
-    let i;
-    for (i = 0; i < curBlobs.length; i++) {
-      let curBlob = curBlobs[i];
-      if (pos >= seek + curBlob.size) {
-        // not arrived yet
-        newBlobs.push(curBlob);
-      } else {
-        const preserve = pos - seek;
-        if (preserve > 0) {
-          const cutBlobData = await Module.readBlob(curBlob).subarray(0, preserve);
-          const cutBlob = await Module.createBlob(cutBlobData);
-          newBlobs.push(cutBlob);
-        }
-        break;
-      }
-      seek += curBlob.size;
-    }
-
-    const contentBlob = await Module.createBlob(data);
-    newBlobs.push(contentBlob);
-
-    seek = 0;
-    const end = pos + len;
-    for (i = 0; i < curBlobs.length; i++) {
-      let curBlob = curBlobs[i];
-      if (end <= seek) {
-        newBlobs.push(curBlob);
-      } else if (end > seek && end <= seek + curBlob.size) {
-        const preserveStart = end - seek;
-        if (preserveStart != curBlob.size) {
-          const cutBlobData = await Module.readBlob(curBlob).subarray(preserveStart, curBlob.size);
-          const cutBlob = await Module.createBlob(cutBlobData);
-          newBlobs.push(cutBlob);
-        }
-      }
-      seek += curBlob.size;
-    }
-
-    curFile.blobs = newBlobs;
-    curFile.mtime = new Date().getTime();
-    await Module.fs.writeFile(path, curFile);
-    return len;
+    return await Module.fsc.writeFile(pathStr, data, pos);
   } catch (e) {
     out(e);
     return -5;
@@ -141,34 +54,9 @@ EM_ASYNC_JS(int, js_writeFile, (const char* path, const uint8_t* dat, uint32_t l
 
 EM_ASYNC_JS(int, js_readFile, (const char* path, uint8_t* dat, uint32_t len, uint32_t pos), {
   try {
-    path = UTF8ToString(path);
+    const pathStr = UTF8ToString(path);
     const data = HEAPU8.subarray(dat, dat + len);
-    let curFile = await Module.fs.readFile(path);
-    const curBlobs = curFile.blobs;
-    let seek = 0;
-    let i;
-    let read = 0;
-    for (i = 0; i < curBlobs.length; i++) {
-      let curBlob = curBlobs[i];
-
-      let start = pos - seek + read;
-      let end = pos + len - seek;
-
-      if (end > curBlob.size)
-        end = curBlob.size;
-
-      if (start >= 0 && start < curBlob.size && end > 0) {
-        const cutBlobData = await Module.readBlob(curBlob);
-        data.set(cutBlobData.subarray(start, end), read);
-        read += (end - start);
-        if (read == len)
-          break;
-      }
-
-      seek += curBlob.size;
-    }
-
-    return read;
+    return await Module.fsc.readFile(pathStr, data, pos);
   } catch (e) {
     out(e);
     return -5;
@@ -177,17 +65,15 @@ EM_ASYNC_JS(int, js_readFile, (const char* path, uint8_t* dat, uint32_t len, uin
 
 EM_ASYNC_JS(uint32_t, js_getPathDetails, (const char* path), {
   try {
-    path = UTF8ToString(path);
-    if (!await Module.fs.exists(path)) {
+    const pathStr = UTF8ToString(path);
+    let curFile = await Module.fsc.readEntry(pathStr, false);
+    if (!curFile) {
       return 0;
-    }
-    let curFile = await Module.fs.details(path);
-    if (curFile.type == 'file') {
-      return Math.floor(curFile.data.mtime / 1000) + 1000;
-    } else if (curFile.type == 'directory') {
+    } else if (curFile.isDirectory) {
       return 999;
+    } else {
+      return Math.floor(curFile.mtime / 1000) + 1000;
     }
-    return 0;
   } catch (e) {
     out(e);
     return 0;
@@ -196,12 +82,8 @@ EM_ASYNC_JS(uint32_t, js_getPathDetails, (const char* path), {
 
 EM_ASYNC_JS(int32_t, js_removeFile, (const char* path), {
   try {
-    path = UTF8ToString(path);
-    if (!await Module.fs.exists(path)) {
-      return 0;
-    }
-
-    await Module.fs.remove(path);
+    const pathStr = UTF8ToString(path);
+    await Module.fsc.delPath(pathStr);
     return 0;
   } catch (e) {
     out(e);
@@ -211,13 +93,9 @@ EM_ASYNC_JS(int32_t, js_removeFile, (const char* path), {
 
 EM_ASYNC_JS(int32_t, js_moveFile, (const char* old_path, const char* new_path), {
   try {
-    old_path = UTF8ToString(old_path);
-    new_path = UTF8ToString(new_path);
-    if (!await Module.fs.exists(old_path)) {
-      return -2;
-    }
-
-    await Module.fs.moveFile(old_path, new_path);
+    const oldStr = UTF8ToString(old_path);
+    const newStr = UTF8ToString(new_path);
+    await Module.fsc.move(oldStr, newStr);
     return 0;
   } catch (e) {
     out(e);
@@ -227,8 +105,8 @@ EM_ASYNC_JS(int32_t, js_moveFile, (const char* old_path, const char* new_path), 
 
 EM_ASYNC_JS(int32_t, js_createDirectory, (const char* path), {
   try {
-    path = UTF8ToString(path);
-    await Module.fs.createDirectory(path);
+    const pathStr = UTF8ToString(path);
+    await Module.fsc.createDirectory(pathStr);
     return 0;
   } catch (e) {
     out(e);
@@ -238,9 +116,8 @@ EM_ASYNC_JS(int32_t, js_createDirectory, (const char* path), {
 
 EM_ASYNC_JS(int32_t, js_getDirectoryEntriesCount, (const char* path), {
   try {
-    path = UTF8ToString(path);
-    const dir = await Module.fs.readDirectory(path);
-    return dir.filesCount + dir.directoriesCount;
+    const pathStr = UTF8ToString(path);
+    return await Module.fsc.getDirectoryEntriesCount(pathStr);
   } catch (e) {
     out(e);
     return -5;
@@ -249,14 +126,8 @@ EM_ASYNC_JS(int32_t, js_getDirectoryEntriesCount, (const char* path), {
 
 EM_ASYNC_JS(int32_t, js_readDirectory, (const char* path, std::vector<wasmfs::Directory::Entry> * vec), {
   try {
-    path = UTF8ToString(path);
-    let entries;
-    try {
-      entries = await Module.fs.readDirectory(path);
-    } catch (e) {
-      out(e);
-      return -5;
-    }
+    const pathStr = UTF8ToString(path);
+    let entries = await Module.fsc.readDirectory(path);
     withStackSave(() => {
       entries.files.forEach((entry) => {
         let name = allocateUTF8OnStack(entry.name);
@@ -412,7 +283,7 @@ namespace wasmfs_rime {
     std::string mountPath;
 
   public:
-    FastIndexedDbBackend(std::string mountPath) : mountPath(std::move(mountPath)) {}
+    FastIndexedDbBackend() : mountPath("/root") {}
 
     std::shared_ptr<DataFile> createFile(mode_t mode) override {
       return std::make_shared<FastIndexedDbFile>(mode, this, mountPath, time(NULL));
@@ -434,8 +305,8 @@ namespace wasmfs_rime {
     }
   };
 
-  backend_t my_wasmfs_create_fast_indexeddb_backend(const char* root) {
-    return wasmFS.addBackend(std::make_unique<FastIndexedDbBackend>(root));
+  backend_t my_wasmfs_create_fast_indexeddb_backend() {
+    return wasmFS.addBackend(std::make_unique<FastIndexedDbBackend>());
   }
 }
 #endif
