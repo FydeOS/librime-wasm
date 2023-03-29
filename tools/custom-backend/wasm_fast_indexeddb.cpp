@@ -41,6 +41,26 @@ EM_ASYNC_JS(int, js_setFileSize, (const char* path, uint32_t size), {
   }
 })
 
+EM_ASYNC_JS(int, js_openFile, (const char* path, bool readonly), {
+  try {
+    const pathStr = UTF8ToString(path);
+    return await Module.fsc.openFile(pathStr, readonly);
+  } catch (e) {
+    out(e);
+    return -5;
+  }
+})
+
+EM_ASYNC_JS(int, js_closeFile, (const char* path), {
+  try {
+    const pathStr = UTF8ToString(path);
+    return await Module.fsc.closeFile(pathStr);
+  } catch (e) {
+    out(e);
+    return -5;
+  }
+})
+
 EM_ASYNC_JS(int, js_writeFile, (const char* path, const uint8_t* dat, uint32_t len, uint32_t pos), {
   try {
     const pathStr = UTF8ToString(path);
@@ -173,11 +193,11 @@ namespace wasmfs_rime {
     }
 
     int open(oflags_t flags) override {
-      return 0;
+      return js_openFile(path.c_str(), flags == O_RDONLY);
     }
 
     int close() override {
-      return 0;
+      return js_closeFile(path.c_str());
     }
 
     ssize_t read(uint8_t* buf, size_t len, off_t offset) override {
