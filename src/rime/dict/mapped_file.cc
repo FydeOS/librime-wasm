@@ -114,7 +114,7 @@ bool MappedFile::Flush() {
     if (!read_write_)
       return true;
     // write buffer to disk
-    int fd = open(file_name_.c_str(), O_WRONLY | O_TRUNC);
+    int fd = open(file_name_.c_str(), O_WRONLY | O_TRUNC | O_CREAT);
     if (fd >= 0) {
       int n;
       size_t l = 0;
