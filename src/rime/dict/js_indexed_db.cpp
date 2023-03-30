@@ -50,7 +50,7 @@ namespace rime {
   EM_JS(void, js_idb_close, (EM_VAL db_handle), {
     try {
       const db = Emval.toValue(db_handle);
-      Module.idb.unwrap(db).close();
+      db.close();
     } catch (e) {
       out(e);
     }
