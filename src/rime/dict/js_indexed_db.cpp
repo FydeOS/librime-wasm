@@ -119,48 +119,6 @@ namespace rime {
     }
   })
 
-  /*
-  EM_ASYNC_JS(EM_VAL, js_idb_create_cursor, (EM_VAL db_handle), {
-    try {
-      const db = Emval.toValue(db_handle);
-      const cursor = await db.transaction('values').store.openCursor();
-      return Emval.toHandle(cursor);
-    } catch (e) {
-      out(e);
-      return null;
-    }
-  })
-
-  EM_ASYNC_JS(bool, js_idb_cursor_continue, (EM_VAL cursor_handle, const char* pos), {
-    try {
-      let cursor = Emval.toValue(cursor_handle);
-      if (pos) {
-        const to_pos = UTF8ToString(pos);
-        await cursor.continue(to_pos);
-      } else {
-        await cursor.continue();
-      }
-      return true;
-    } catch (e) {
-      if (!e.message.includes("has iterated past its end"))
-        out(e);
-      return false;
-    }
-  })
-
-  EM_JS(char *, js_idb_cursor_get_val, (EM_VAL cursor_handle, bool value), {
-    try {
-      const cursor = Emval.toValue(cursor_handle);
-      const result = value ? cursor.value : cursor.key;
-      return allocateUTF8(result);
-    } catch (e) {
-      out(e);
-      return null;
-    }
-  })
-   */
-
-
   struct JsIndexedDbWrapper : std::enable_shared_from_this<JsIndexedDbWrapper> {
     emscripten::val db_handle;
     std::map<string, string> data;
