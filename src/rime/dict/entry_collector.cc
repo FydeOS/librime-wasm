@@ -165,21 +165,16 @@ void EntryCollector::CreateEntry(const string &word,
   }
   if (scaled) {
     double percentage = 100.0;
-    try {
-      percentage = boost::lexical_cast<double>(
-          weight_str.substr(0, weight_str.length() - 1));
-    }
-    catch (...) {
+    bool ok = boost::conversion::try_lexical_convert(weight_str.substr(0, weight_str.length() - 1), percentage);
+    if (!ok) {
       LOG(WARNING) << "invalid entry definition at #" << num_entries << ".";
       percentage = 100.0;
     }
     e.weight *= percentage / 100.0;
   }
   else if (!weight_str.empty()) {  // absolute weight
-    try {
-      e.weight = boost::lexical_cast<double>(weight_str);
-    }
-    catch (...) {
+    bool ok = boost::conversion::try_lexical_convert(weight_str, e.weight);
+    if (!ok) {
       LOG(WARNING) << "invalid entry definition at #" << num_entries << ".";
       e.weight = 0.0;
     }
