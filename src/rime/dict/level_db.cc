@@ -49,7 +49,7 @@ struct LevelDbCursor {
       return false;
     }
     iterator->Seek(key);
-    return true;
+    return iterator->Valid();
   }
 
   void Release() {
