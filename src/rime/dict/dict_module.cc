@@ -10,7 +10,7 @@
 #include <rime/registry.h>
 #include <rime/dict/db.h>
 #ifdef __EMSCRIPTEN__
-#include <rime/dict/js_leveldb.h>
+#include <rime/dict/js_indexed_db.h>
 #else
 #include <rime/dict/level_db.h>
 #endif
@@ -33,7 +33,7 @@ static void rime_dict_initialize() {
   r.Register("stabledb", new DbComponent<StableDb>);
   r.Register("plain_userdb", new UserDbComponent<TextDb>);
 #ifdef __EMSCRIPTEN__
-  r.Register("userdb", new UserDbComponent<JsLevelDb>);
+  r.Register("userdb", new UserDbComponent<JsIndexedDb>);
 #else
   r.Register("userdb", new UserDbComponent<LevelDb>);
 #endif
