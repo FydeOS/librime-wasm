@@ -16,7 +16,7 @@
 
 
 namespace wasmfs_rime {
-  backend_t my_wasmfs_create_fast_indexeddb_backend(const char* root);
+  backend_t my_wasmfs_create_fast_indexeddb_backend();
 }
 
 static void on_message(void* context_object,
@@ -40,7 +40,7 @@ static void on_message(void* context_object,
 static void WasmRimeSetup() {
   printf("WASM compiled at: %s %s\n", __DATE__, __TIME__);
   printf("Initializing...\n");
-  backend_t backend = wasmfs_rime::my_wasmfs_create_fast_indexeddb_backend("rime-data");
+  backend_t backend = wasmfs_rime::my_wasmfs_create_fast_indexeddb_backend();
   wasmfs_create_directory("/working", 0777, backend);
   chdir("/working");
 
