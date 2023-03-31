@@ -13,7 +13,17 @@
 #include <cstring>
 #include <boost/noncopyable.hpp>
 #include <glog/logging.h>
+#include <malloc.h>
 
+void memoryStatistics(){
+  unsigned int totalMemory = 	EM_ASM_INT(return HEAP8.length);
+  printf("Total memory: %u bytes\n", totalMemory);
+  struct mallinfo i = mallinfo();
+  unsigned int dynamicTop = (unsigned int)sbrk(0);
+  int free_mem = totalMemory - dynamicTop + i.fordblks;
+  printf("Free memory: %u bytes\n", free_mem);
+  printf("Used: %u bytes\n", totalMemory - free_mem);
+}
 
 namespace wasmfs_rime {
   backend_t my_wasmfs_create_fast_indexeddb_backend();
