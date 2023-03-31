@@ -55,6 +55,10 @@ static void WasmRimeSetup() {
   printf("Rime setup done\n");
 }
 
+static void WasmRimeFinialize() {
+  RimeFinalize();
+}
+
 #include <boost/throw_exception.hpp>
 
 void boost::throw_exception(std::exception const & e){
@@ -98,6 +102,7 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
 
   void Initialize() {
     if (!sessionId) {
+      LOG(WARNING) << "Creating session";
       sessionId = RimeCreateSession();
     }
   }
@@ -186,10 +191,50 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
     RimeFreeStatus(&status);
     return v;
   }
+
+  void ClearComposition() {
+    RimeClearComposition(sessionId);
+  }
+
+  val GetCurrentSchema() {
+    char bbb[30];
+    if (RimeGetCurrentSchema(sessionId, bbb, sizeof(bbb))) {
+      return val::u8string(bbb);
+    }
+    return val::null();
+  }
+
+  bool SelectSchema(std::string schema_id) {
+    return RimeSelectSchema(sessionId, schema_id.c_str());
+  }
 };
+
+val WasmRimeGetSchemaList() {
+  RimeSchemaList list;
+  if (!RimeGetSchemaList(&list)) {
+    return val::null();
+  }
+  auto v = val::array();
+  for (int i = 0; i < list.size; i++) {
+    auto o = val::object();
+    o.set("id", val::u8string(list.list[i].schema_id));
+    o.set("name", val::u8string(list.list[i].name));
+    v.set(i, o);
+  }
+  RimeFreeSchemaList(&list);
+  return v;
+}
+
+void PerformMaintenance(bool full) {
+  // Multithreading has been removed, so this operation will complete synchronously
+  RimeStartMaintenance(full);
+}
 
 EMSCRIPTEN_BINDINGS(WasmRime) {
   function("rimeSetup", &WasmRimeSetup);
+  function("rimeFinalize", &WasmRimeFinialize);
+  function("rimePerformMaintenance", &PerformMaintenance);
+  function("rimeGetSchemaList", &WasmRimeGetSchemaList);
   class_<CRimeSession>("RimeSession")
       .smart_ptr_constructor("RimeSession", &std::make_shared<CRimeSession>)
       .function("initialize", &CRimeSession::Initialize)
@@ -198,5 +243,8 @@ EMSCRIPTEN_BINDINGS(WasmRime) {
       .function("getContext", &CRimeSession::GetContext)
       .function("getStatus", &CRimeSession::GetStatus)
       .function("getCommit", &CRimeSession::GetCommit)
+      .function("clearComposition", &CRimeSession::ClearComposition)
+      .function("getCurrentSchema", &CRimeSession::GetCurrentSchema)
+      .function("selectSchema", &CRimeSession::SelectSchema)
       ;
 }
