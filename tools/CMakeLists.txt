@@ -7,7 +7,7 @@ set(rime_console_deps
   ${rime_levers_library}
   ${rime_plugins_library})
 
-set(rime_api_console_src "rime_api_console.cc" custom-backend/wasm_node.cpp)
+set(rime_api_console_src "rime_api_console.cc")
 add_executable(rime_api_console ${rime_api_console_src})
 target_link_libraries(rime_api_console ${rime_console_deps})
 
