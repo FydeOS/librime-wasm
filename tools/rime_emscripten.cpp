@@ -220,6 +220,15 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
   bool SelectSchema(std::string schema_id) {
     return api->select_schema(sessionId, schema_id.c_str());
   }
+
+  bool ActionCandidateOnCurrentPage(int id, int op) {
+    if (op == 0) {
+      return api->select_candidate_on_current_page(sessionId, id);
+    } else if (op == 1) {
+      return api->delete_candidate_on_current_page(sessionId, id);
+    }
+    return false;
+  }
 };
 
 val WasmRimeGetSchemaList() {
@@ -259,5 +268,6 @@ EMSCRIPTEN_BINDINGS(WasmRime) {
       .function("clearComposition", &CRimeSession::ClearComposition)
       .function("getCurrentSchema", &CRimeSession::GetCurrentSchema)
       .function("selectSchema", &CRimeSession::SelectSchema)
+      .function("actionCandidateOnCurrentPage", &CRimeSession::ActionCandidateOnCurrentPage)
       ;
 }
