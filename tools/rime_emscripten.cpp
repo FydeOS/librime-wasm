@@ -47,7 +47,10 @@ static void on_message(void* context_object,
   }
 }
 
+static RimeApi* api;
+
 static void WasmRimeSetup() {
+  api = rime_get_api();
   printf("WASM compiled at: %s %s\n", __DATE__, __TIME__);
   printf("Initializing...\n");
   backend_t backend = wasmfs_rime::my_wasmfs_create_fast_indexeddb_backend();
@@ -58,15 +61,15 @@ static void WasmRimeSetup() {
   traits.shared_data_dir = "/working";
   traits.user_data_dir = "/working";
   traits.app_name = "rime.wasm";
-  RimeSetup(&traits);
-  RimeSetNotificationHandler(&on_message, NULL);
-  RimeInitialize(&traits);
+  api->setup(&traits);
+  api->set_notification_handler(&on_message, NULL);
+  api->initialize(&traits);
 
   printf("Rime setup done\n");
 }
 
 static void WasmRimeFinialize() {
-  RimeFinalize();
+  api->finalize();
 }
 
 #include <boost/throw_exception.hpp>
@@ -113,18 +116,18 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
   void Initialize() {
     if (!sessionId) {
       LOG(WARNING) << "Creating session";
-      sessionId = RimeCreateSession();
+      sessionId = api->create_session();
     }
   }
 
   ~CRimeSession() {
     if (sessionId) {
-      RimeDestroySession(sessionId);
+      api->destroy_session(sessionId);
     }
   }
 
   bool ProcessKey(int key_id, int mask) {
-    return RimeProcessKey(sessionId, key_id, mask);
+    return api->process_key(sessionId, key_id, mask);
   }
 
   std::string Hello() {
@@ -133,7 +136,7 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
 
   val GetContext() {
     RIME_STRUCT(RimeContext, context);
-    bool got = RimeGetContext(sessionId, &context);
+    bool got = api->get_context(sessionId, &context);
     if (!got) {
       return val::null();
     }
@@ -165,26 +168,26 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
       v["selectLabels"].set(i, val::u8string(context.select_labels[i]));
     }
 
-    RimeFreeContext(&context);
+    api->free_context(&context);
     return v;
   }
 
   val GetCommit() {
     RIME_STRUCT(RimeCommit, commit);
-    bool got = RimeGetCommit(sessionId, &commit);
+    bool got = api->get_commit(sessionId, &commit);
     if (!got) {
       return val::null();
     }
     auto v =  val::object();
     v.set("text", val::u8string(commit.text));
 
-    RimeFreeCommit(&commit);
+    api->free_commit(&commit);
     return v;
   }
 
   val GetStatus() {
     RIME_STRUCT(RimeStatus, status);
-    bool got = RimeGetStatus(sessionId, &status);
+    bool got = api->get_status(sessionId, &status);
     if (!got) {
       return val::null();
     }
@@ -198,30 +201,30 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
     v.set("isSimplified", bool(status.is_simplified));
     v.set("isTraditional", bool(status.is_traditional));
     v.set("isAsciiPunct", bool(status.is_ascii_punct));
-    RimeFreeStatus(&status);
+    api->free_status(&status);
     return v;
   }
 
   void ClearComposition() {
-    RimeClearComposition(sessionId);
+    api->clear_composition(sessionId);
   }
 
   val GetCurrentSchema() {
     char bbb[30];
-    if (RimeGetCurrentSchema(sessionId, bbb, sizeof(bbb))) {
+    if (api->get_current_schema(sessionId, bbb, sizeof(bbb))) {
       return val::u8string(bbb);
     }
     return val::null();
   }
 
   bool SelectSchema(std::string schema_id) {
-    return RimeSelectSchema(sessionId, schema_id.c_str());
+    return api->select_schema(sessionId, schema_id.c_str());
   }
 };
 
 val WasmRimeGetSchemaList() {
   RimeSchemaList list;
-  if (!RimeGetSchemaList(&list)) {
+  if (!api->get_schema_list(&list)) {
     return val::null();
   }
   auto v = val::array();
@@ -231,13 +234,13 @@ val WasmRimeGetSchemaList() {
     o.set("name", val::u8string(list.list[i].name));
     v.set(i, o);
   }
-  RimeFreeSchemaList(&list);
+  api->free_schema_list(&list);
   return v;
 }
 
 void PerformMaintenance(bool full) {
   // Multithreading has been removed, so this operation will complete synchronously
-  RimeStartMaintenance(full);
+  api->start_maintenance(full);
 }
 
 EMSCRIPTEN_BINDINGS(WasmRime) {
