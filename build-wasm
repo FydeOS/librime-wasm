@@ -5,5 +5,5 @@ export LDFLAGS="-sASYNCIFY -s ALLOW_MEMORY_GROWTH=1 -sWASMFS -s EXPORT_ES6=1 -sM
 mkdir -p cmake-build-wasm
 cd cmake-build-wasm
 
-emcmake cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=0 -DENABLE_LOGGING=on -DBUILD_STATIC=on 
+emcmake cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=0 -DENABLE_LOGGING=on -DBUILD_STATIC=on -DBUILD_MERGED_PLUGINS=on
 emmake make -j4 rime_emscripten

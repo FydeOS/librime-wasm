@@ -25,6 +25,8 @@ void memoryStatistics(){
   printf("Used: %u bytes\n", totalMemory - free_mem);
 }
 
+void rime_require_module_lua();
+
 namespace wasmfs_rime {
   backend_t my_wasmfs_create_fast_indexeddb_backend();
 }
@@ -50,6 +52,7 @@ static void on_message(void* context_object,
 static RimeApi* api;
 
 static void WasmRimeSetup() {
+  rime_require_module_lua();
   api = rime_get_api();
   printf("WASM compiled at: %s %s\n", __DATE__, __TIME__);
   printf("Initializing...\n");
