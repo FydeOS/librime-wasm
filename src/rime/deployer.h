@@ -82,7 +82,7 @@ class Deployer : public Messenger {
   bool IsWorking() {
     return is_working;
   }
-  bool IsMaintenanceMode() { return maintenance_mode_; }
+  bool IsMaintenanceMode() { return maintenance_mode_ && is_working; }
   void JoinWorkThread() {}
   void JoinMaintenanceThread() {}
 #endif
