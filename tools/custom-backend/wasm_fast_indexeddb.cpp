@@ -14,11 +14,16 @@
 #ifdef __EMSCRIPTEN__
 #include <memory>
 #include <utility>
+#include <emscripten.h>
+#include <emscripten/val.h>
 
 #include "backend.h"
 #include "file.h"
 #include "support.h"
 #include "wasmfs.h"
+
+using emscripten::EM_VAL;
+using emscripten::val;
 
 EM_ASYNC_JS(int, js_getFileSize, (const char *path), {
   try {
@@ -144,24 +149,14 @@ EM_ASYNC_JS(int32_t, js_getDirectoryEntriesCount, (const char* path), {
   }
 })
 
-EM_ASYNC_JS(int32_t, js_readDirectory, (const char* path, std::vector<wasmfs::Directory::Entry> * vec), {
+EM_ASYNC_JS(EM_VAL, js_readDirectory, (const char* path), {
   try {
     const pathStr = UTF8ToString(path);
-    let entries = await Module.fsc.readDirectory(path);
-    withStackSave(() => {
-      entries.files.forEach((entry) => {
-        let name = allocateUTF8OnStack(entry.name);
-        __wasmfs_node_record_dirent(vec, name, 1);
-      });
-      entries.directories.forEach((entry) => {
-        let name = allocateUTF8OnStack(entry.name);
-        __wasmfs_node_record_dirent(vec, name, 2);
-      });
-    });
-    return 0;
+    let entries = await Module.fsc.readDirectory(pathStr);
+    return Emval.toHandle(entries);
   } catch (e) {
     out(e);
-    return -5;
+    return Emval.toHandle(null);
   }
 })
 
@@ -290,9 +285,13 @@ namespace wasmfs_rime {
 
     Directory::MaybeEntries getEntries() override {
       std::vector<Directory::Entry> entries;
-      int err = js_readDirectory(path.c_str(), &entries);
-      if (err) {
-        return {-err};
+      EM_VAL v = js_readDirectory(path.c_str());
+      val vv = val::take_ownership(v);
+      int len = vv["length"].as<int>();
+      for (int i = 0; i < len; i++) {
+        bool is_dir = vv[i]["isDirectory"].as<bool>();
+        std::string name = vv[i]["name"].as<std::string>();
+        entries.push_back(Directory::Entry{name, is_dir ? FileKind::DirectoryKind : FileKind::DataFileKind, 0});
       }
       return {entries};
     }
