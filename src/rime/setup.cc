@@ -69,6 +69,16 @@ RIME_API void SetupDeployer(RimeTraits *traits) {
     deployer.staging_dir = (fs::path(deployer.user_data_dir) / "build").string();
 }
 
+void PrefixAttacher(std::ostream &s, const google::LogMessageInfo &l, void* data) {
+  s << l.severity[0]
+    << std::setw(2) << l.time.hour() << ':'
+    << std::setw(2) << l.time.min()  << ':'
+    << std::setw(2) << l.time.sec() << "."
+    << std::setw(3) << l.time.usec() / 1000
+    << ' '
+    << l.filename << ':' << l.line_number << "]";
+}
+
 RIME_API void SetupLogging(const char* app_name, int min_log_level, const char* log_dir) {
 #ifdef RIME_ENABLE_LOGGING
   FLAGS_minloglevel = min_log_level;
@@ -78,7 +88,7 @@ RIME_API void SetupLogging(const char* app_name, int min_log_level, const char* 
   }
   // Do not allow other users to read/write log files created by current process.
   FLAGS_logfile_mode = 0600;
-  google::InitGoogleLogging(app_name);
+  google::InitGoogleLogging(app_name, PrefixAttacher, nullptr);
 #endif  // RIME_ENABLE_LOGGING
 }
 
