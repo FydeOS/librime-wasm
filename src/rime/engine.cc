@@ -60,7 +60,7 @@ Engine* Engine::Create() {
   return new ConcreteEngine;
 }
 
-Engine::Engine() : schema_(new Schema), context_(new Context) {
+Engine::Engine() : schema_(nullptr), context_(new Context) {
 }
 
 Engine::~Engine() {
@@ -69,7 +69,6 @@ Engine::~Engine() {
 }
 
 ConcreteEngine::ConcreteEngine() {
-  LOG(INFO) << "starting engine.";
   // receive context notifications
   context_->commit_notifier().connect(
       [this](Context* ctx) { OnCommit(ctx); });
@@ -85,8 +84,6 @@ ConcreteEngine::ConcreteEngine() {
       [this](Context* ctx, const string& property) {
         OnPropertyUpdate(ctx, property);
       });
-  InitializeComponents();
-  InitializeOptions();
 }
 
 ConcreteEngine::~ConcreteEngine() {
@@ -274,6 +271,7 @@ void ConcreteEngine::ApplySchema(Schema* schema) {
   schema_.reset(schema);
   context_->Clear();
   context_->ClearTransientOptions();
+  LOG(INFO) << "starting engine with schema " << schema->schema_id() << ".";
   InitializeComponents();
   InitializeOptions();
   message_sink_("schema", schema->schema_id() + "/" + schema->schema_name());
@@ -284,15 +282,6 @@ void ConcreteEngine::InitializeComponents() {
   segmentors_.clear();
   translators_.clear();
   filters_.clear();
-
-  if (auto switcher = New<Switcher>(this)) {
-    processors_.push_back(switcher);
-    if (schema_->schema_id() == ".default") {
-      if (Schema* schema = switcher->CreateSchema()) {
-        schema_.reset(schema);
-      }
-    }
-  }
 
   Config* config = schema_->config();
   if (!config)
