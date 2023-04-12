@@ -16,8 +16,7 @@ class Schema {
  public:
   Schema();
   explicit Schema(const string& schema_id);
-  Schema(const string& schema_id, Config* config)
-      : schema_id_(schema_id), config_(config) {}
+  Schema(const string& schema_id, Config* config);
 
   const string& schema_id() const { return schema_id_; }
   const string& schema_name() const { return schema_name_; }

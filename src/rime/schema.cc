@@ -23,6 +23,11 @@ Schema::Schema(const string& schema_id)
   FetchUsefulConfigItems();
 }
 
+Schema::Schema(const string& schema_id, Config* config)
+    : schema_id_(schema_id), config_(config) { 
+  FetchUsefulConfigItems(); 
+}
+
 void Schema::FetchUsefulConfigItems() {
   if (!config_) {
     schema_name_ = schema_id_ + "?";
