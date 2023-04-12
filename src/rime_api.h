@@ -456,6 +456,7 @@ typedef struct rime_api_t {
 
   Bool (*get_current_schema)(RimeSessionId session_id, char* schema_id, size_t buffer_size);
   Bool (*select_schema)(RimeSessionId session_id, const char* schema_id);
+  Bool (*select_schema_with_config)(RimeSessionId session_id, const char* schema_id, const char* config);
 
   // configuration
 

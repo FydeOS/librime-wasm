@@ -116,10 +116,15 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
     sessionId = 0;
   }
 
-  void Initialize() {
+  void Initialize(std::string schema_id, std::string schema_config) {
     if (!sessionId) {
       LOG(WARNING) << "Creating session";
       sessionId = api->create_session();
+      Bool b = api->select_schema_with_config(sessionId, schema_id.c_str(), schema_config.c_str());
+      if (!b) {
+        LOG(ERROR) << "Failed to create new session";
+        api->destroy_session(sessionId);
+      }
     }
   }
 
@@ -220,10 +225,6 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
     return val::null();
   }
 
-  bool SelectSchema(std::string schema_id) {
-    return api->select_schema(sessionId, schema_id.c_str());
-  }
-
   bool ActionCandidateOnCurrentPage(int id, int op) {
     if (op == 0) {
       return api->select_candidate_on_current_page(sessionId, id);
@@ -270,7 +271,6 @@ EMSCRIPTEN_BINDINGS(WasmRime) {
       .function("getCommit", &CRimeSession::GetCommit)
       .function("clearComposition", &CRimeSession::ClearComposition)
       .function("getCurrentSchema", &CRimeSession::GetCurrentSchema)
-      .function("selectSchema", &CRimeSession::SelectSchema)
       .function("actionCandidateOnCurrentPage", &CRimeSession::ActionCandidateOnCurrentPage)
       ;
 }

@@ -22,6 +22,7 @@
 #include <rime/signature.h>
 #include <rime/switches.h>
 #include <rime_api.h>
+#include <sstream>
 
 using namespace rime;
 using namespace std::placeholders;
@@ -533,6 +534,17 @@ RIME_API Bool RimeSelectSchema(RimeSessionId session_id, const char* schema_id) 
   an<Session> session(Service::instance().GetSession(session_id));
   if (!session) return False;
   session->ApplySchema(new Schema(schema_id));
+  return True;
+}
+
+RIME_API Bool RimeSelectSchemaWithConfig(RimeSessionId session_id, const char* schema_id, const char* config) {
+  if (!schema_id || !config) return False;
+  an<Session> session(Service::instance().GetSession(session_id));
+  if (!session) return False;
+  Config* cfg = new Config();
+  std::istringstream ss(config);
+  cfg->LoadFromStream(ss);
+  session->ApplySchema(new Schema(schema_id, cfg));
   return True;
 }
 
@@ -1059,6 +1071,7 @@ RIME_API RimeApi* rime_get_api() {
     s_api.free_schema_list = &RimeFreeSchemaList;
     s_api.get_current_schema = &RimeGetCurrentSchema;
     s_api.select_schema = &RimeSelectSchema;
+    s_api.select_schema_with_config = &RimeSelectSchemaWithConfig;
     s_api.schema_open = &RimeSchemaOpen;
     s_api.config_open = &RimeConfigOpen;
     s_api.user_config_open = &RimeUserConfigOpen;
