@@ -162,11 +162,15 @@ bool DictCompiler::Compile(const string &schema_file) {
     }
     syllabary = std::move(collector.syllabary);
   }
-  if (rebuild_prism &&
-      !BuildPrism(schema_file,
-                  dict_file_checksum,
-                  schema_file_checksum)) {
-    return false;
+  if (rebuild_prism) {
+    Config config;
+    if (!config.LoadFromFile(schema_file)) {
+      LOG(ERROR) << "error loading prism definition from " << schema_file;
+      return false;
+    }
+    if (!BuildPrism(&config, dict_file_checksum, schema_file_checksum)) {
+      return false;
+    }
   }
   if (rebuild_table) {
     for (int table_index = 1; table_index < tables_.size(); ++table_index) {
@@ -295,7 +299,7 @@ bool DictCompiler::BuildReverseDb(DictSettings* settings,
   return true;
 }
 
-bool DictCompiler::BuildPrism(const string &schema_file,
+bool DictCompiler::BuildPrism(Config* schema_config,
                               uint32_t dict_file_checksum,
                               uint32_t schema_file_checksum) {
   LOG(INFO) << "building prism...";
@@ -312,14 +316,9 @@ bool DictCompiler::BuildPrism(const string &schema_file,
     return false;
  // apply spelling algebra and prepare corrections (if enabled)
   Script script;
-  if (!schema_file.empty()) {
-    Config config;
-    if (!config.LoadFromFile(schema_file)) {
-      LOG(ERROR) << "error loading prism definition from " << schema_file;
-      return false;
-    }
+  if (schema_config) {
     Projection p;
-    auto algebra = config.GetList("speller/algebra");
+    auto algebra = schema_config->GetList("speller/algebra");
     if (algebra && p.Load(algebra)) {
       for (const auto& x : syllabary) {
         script.AddSyllable(x);
