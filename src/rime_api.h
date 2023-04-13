@@ -568,6 +568,8 @@ typedef struct rime_api_t {
                                                  const char *option_name,
                                                  Bool state,
                                                  Bool abbreviated);
+  
+  Bool (*rebuild_prism_for_schema)(const char* schema_id, const char* schema_config);
 } RimeApi;
 
 //! API entry

@@ -361,10 +361,12 @@ bool DictCompiler::BuildPrism(Config* schema_config,
     if (!prism_->Build(syllabary, script.empty() ? nullptr : &script,
                        dict_file_checksum, schema_file_checksum) ||
         !prism_->Save()) {
+      LOG(WARNING) << "Failed to build prism.";
       return false;
     }
   }
 
+  LOG(INFO) << "Prism built.";
   return true;
 }
 

@@ -21,6 +21,9 @@
 #include <rime/setup.h>
 #include <rime/signature.h>
 #include <rime/switches.h>
+#include <rime/ticket.h>
+#include <rime/dict/dictionary.h>
+#include <rime/dict/dict_compiler.h>
 #include <rime_api.h>
 #include <sstream>
 
@@ -1010,6 +1013,25 @@ void RimeSetCaretPos(RimeSessionId session_id, size_t caret_pos) {
   return ctx->set_caret_pos(caret_pos);
 }
 
+Bool RimeRebuildPrismForSchema(const char* schema_id, const char* schema_config) {
+  if (!schema_id || !schema_config) return False;
+  Config* cfg = new Config();
+  std::istringstream ss(schema_config);
+  cfg->LoadFromStream(ss);
+  Schema* schema = new Schema(schema_id, cfg);
+  Ticket t{schema, "translator"};
+  auto dictionary = Dictionary::Require("dictionary");
+  if (!dictionary) {
+    return False;
+  }
+  auto main_dict = dictionary->Create(t);
+  main_dict->Load();
+  DictCompiler comp(main_dict);
+  bool result = comp.BuildPrism(cfg, 0, 0);
+  delete main_dict;
+  return result;
+}
+
 RimeStringSlice RimeGetStateLabelAbbreviated(RimeSessionId session_id,
                                              const char* option_name,
                                              Bool state,
@@ -1126,6 +1148,7 @@ RIME_API RimeApi* rime_get_api() {
     s_api.delete_candidate = &RimeDeleteCandidate;
     s_api.delete_candidate_on_current_page = &RimeDeleteCandidateOnCurrentPage;
     s_api.get_state_label_abbreviated = &RimeGetStateLabelAbbreviated;
+    s_api.rebuild_prism_for_schema = &RimeRebuildPrismForSchema;
   }
   return &s_api;
 }

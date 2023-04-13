@@ -37,7 +37,6 @@ class DictCompiler {
   RIME_API bool Compile(const string &schema_file);
   void set_options(int options) { options_ = options; }
 
- private:
   bool BuildTable(int table_index,
                   EntryCollector& collector,
                   DictSettings* settings,
@@ -51,6 +50,7 @@ class DictCompiler {
                       const Vocabulary& vocabulary,
                       uint32_t dict_file_checksum);
 
+ private:
   const string& dict_name_;
   const vector<string>& packs_;
   an<Prism> prism_;

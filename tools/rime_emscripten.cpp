@@ -251,6 +251,10 @@ val WasmRimeGetSchemaList() {
   return v;
 }
 
+void WasmRimeRebuildPrismForSchema(std::string schema_id, std::string schema_config) {
+  api->rebuild_prism_for_schema(schema_id.c_str(), schema_config.c_str());
+}
+
 void PerformMaintenance(bool full) {
   // Multithreading has been removed, so this operation will complete synchronously
   api->start_maintenance(full);
@@ -261,6 +265,7 @@ EMSCRIPTEN_BINDINGS(WasmRime) {
   function("rimeFinalize", &WasmRimeFinialize);
   function("rimePerformMaintenance", &PerformMaintenance);
   function("rimeGetSchemaList", &WasmRimeGetSchemaList);
+  function("rimeRebuildPrismForSchema", &WasmRimeRebuildPrismForSchema);
   class_<CRimeSession>("RimeSession")
       .smart_ptr_constructor("RimeSession", &std::make_shared<CRimeSession>)
       .function("initialize", &CRimeSession::Initialize)
