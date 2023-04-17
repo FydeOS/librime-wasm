@@ -12,14 +12,8 @@
 
 namespace rime {
 
-Deployer::Deployer() :
-#ifdef __EMSCRIPTEN__
-                       shared_data_dir("/working"),
-                       user_data_dir("/working"),
-#else
-                       shared_data_dir("."),
+Deployer::Deployer() : shared_data_dir("."),
                        user_data_dir("."),
-#endif
                        prebuilt_data_dir("build"),
                        staging_dir("build"),
                        sync_dir("sync"),
