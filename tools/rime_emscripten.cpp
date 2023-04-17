@@ -61,8 +61,10 @@ static void WasmRimeSetup() {
   chdir("/working");
 
   RIME_STRUCT(RimeTraits, traits);
-  traits.shared_data_dir = "/working";
-  traits.user_data_dir = "/working";
+  traits.shared_data_dir = "/working/shared";
+  traits.user_data_dir = "/working/user";
+  traits.prebuilt_data_dir = "/working/build";
+  traits.staging_dir = "/working/build";
   traits.app_name = "rime.wasm";
   api->setup(&traits);
   api->set_notification_handler(&on_message, NULL);
