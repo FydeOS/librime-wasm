@@ -2,7 +2,7 @@
 // Created by fydeos on 23-3-21.
 //
 
-
+#include <map>
 #include <emscripten.h>
 #include <rime_api.h>
 #include <emscripten/wasmfs.h>
@@ -31,47 +31,7 @@ namespace wasmfs_rime {
   backend_t my_wasmfs_create_fast_indexeddb_backend();
 }
 
-static void on_message(void* context_object,
-                       RimeSessionId session_id,
-                       const char* message_type,
-                       const char* message_value) {
-  printf("message: [%lu] [%s] %s\n", session_id, message_type, message_value);
-  RimeApi* rime = rime_get_api();
-  if (RIME_API_AVAILABLE(rime, get_state_label) &&
-      !strcmp(message_type, "option")) {
-    Bool state = message_value[0] != '!';
-    const char* option_name = message_value + !state;
-    const char* state_label =
-        rime->get_state_label(session_id, option_name, state);
-    if (state_label) {
-      printf("updated option: %s = %d // %s\n", option_name, state, state_label);
-    }
-  }
-}
-
 static RimeApi* api;
-
-static void WasmRimeSetup() {
-  rime_require_module_lua();
-  api = rime_get_api();
-  printf("WASM compiled at: %s %s\n", __DATE__, __TIME__);
-  printf("Initializing...\n");
-  backend_t backend = wasmfs_rime::my_wasmfs_create_fast_indexeddb_backend();
-  wasmfs_create_directory("/working", 0777, backend);
-  chdir("/working");
-
-  RIME_STRUCT(RimeTraits, traits);
-  traits.shared_data_dir = "/working/shared";
-  traits.user_data_dir = "/working/user";
-  traits.prebuilt_data_dir = "/working/build";
-  traits.staging_dir = "/working/build";
-  traits.app_name = "rime.wasm";
-  api->setup(&traits);
-  api->set_notification_handler(&on_message, NULL);
-  api->initialize(&traits);
-
-  printf("Rime setup done\n");
-}
 
 static void WasmRimeFinialize() {
   api->finalize();
@@ -113,12 +73,15 @@ static int ConvertUtf8Index(const char* str, int b_idx) {
 }
 
 struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSession> {
+  static std::map<RimeSessionId, CRimeSession*> sessionMap;
+
   RimeSessionId sessionId;
+  val onOptionChangedFunction;
   CRimeSession() {
     sessionId = 0;
   }
 
-  void Initialize(std::string schema_id, std::string schema_config) {
+  void Initialize(std::string schema_id, std::string schema_config, val onOptionChanged) {
     if (!sessionId) {
       LOG(WARNING) << "Creating session";
       sessionId = api->create_session();
@@ -128,11 +91,14 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
         api->destroy_session(sessionId);
       }
     }
+    onOptionChangedFunction = onOptionChanged;
+    sessionMap.insert({sessionId, this});
   }
 
   ~CRimeSession() {
     if (sessionId) {
       api->destroy_session(sessionId);
+      sessionMap.erase(sessionId);
     }
   }
 
@@ -235,7 +201,63 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
     }
     return false;
   }
+
+  bool GetOption(std::string name) {
+    bool val = api->get_option(sessionId, name.c_str());
+    return val;
+  }
+
+  void SetOption(std::string name, bool val) {
+    bool oldVal = api->get_option(sessionId, name.c_str());
+    // Only set option if value doesn't match, to prevent dead loop
+    if (oldVal != val) {
+      api->set_option(sessionId, name.c_str(), val);
+    }
+  }
+
+  std::string GetOptionLabel(std::string name, bool state) {
+    return api->get_state_label(sessionId, name.c_str(), state);
+  }
 };
+
+std::map<RimeSessionId, CRimeSession*> CRimeSession::sessionMap;
+
+static void on_message(void* context_object,
+                       RimeSessionId session_id,
+                       const char* message_type,
+                       const char* message_value) {
+  printf("message: [%lu] [%s] %s\n", session_id, message_type, message_value);
+  if(strcmp(message_type, "option") == 0) {
+    Bool state = message_value[0] != '!';
+    const char* option_name = message_value + !state;
+    auto ptr = CRimeSession::sessionMap.find(session_id);
+    if (ptr != CRimeSession::sessionMap.end()) {
+      ptr->second->onOptionChangedFunction(std::string(option_name), state);
+    }
+  }
+}
+
+static void WasmRimeSetup() {
+  rime_require_module_lua();
+  api = rime_get_api();
+  printf("WASM compiled at: %s %s\n", __DATE__, __TIME__);
+  printf("Initializing...\n");
+  backend_t backend = wasmfs_rime::my_wasmfs_create_fast_indexeddb_backend();
+  wasmfs_create_directory("/working", 0777, backend);
+  chdir("/working");
+
+  RIME_STRUCT(RimeTraits, traits);
+  traits.shared_data_dir = "/working/shared";
+  traits.user_data_dir = "/working/user";
+  traits.prebuilt_data_dir = "/working/build";
+  traits.staging_dir = "/working/build";
+  traits.app_name = "rime.wasm";
+  api->setup(&traits);
+  api->set_notification_handler(&on_message, NULL);
+  api->initialize(&traits);
+
+  printf("Rime setup done\n");
+}
 
 val WasmRimeGetSchemaList() {
   RimeSchemaList list;
@@ -279,5 +301,8 @@ EMSCRIPTEN_BINDINGS(WasmRime) {
       .function("clearComposition", &CRimeSession::ClearComposition)
       .function("getCurrentSchema", &CRimeSession::GetCurrentSchema)
       .function("actionCandidateOnCurrentPage", &CRimeSession::ActionCandidateOnCurrentPage)
+      .function("getOption", &CRimeSession::GetOption)
+      .function("setOption", &CRimeSession::SetOption)
+      .function("getOptionLabel", &CRimeSession::GetOptionLabel)
       ;
 }
