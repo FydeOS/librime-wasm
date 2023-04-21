@@ -193,11 +193,19 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
     return val::null();
   }
 
-  bool ActionCandidateOnCurrentPage(int id, int op) {
+  bool ActionCandidate(int id, int op, bool currentPage) {
     if (op == 0) {
-      return api->select_candidate_on_current_page(sessionId, id);
+      if (currentPage) {
+        return api->select_candidate_on_current_page(sessionId, id);
+      } else {
+        return api->select_candidate(sessionId, id);
+      }
     } else if (op == 1) {
-      return api->delete_candidate_on_current_page(sessionId, id);
+      if (currentPage) {
+        return api->delete_candidate_on_current_page(sessionId, id);
+      } else {
+        return api->delete_candidate(sessionId, id);
+      }
     }
     return false;
   }
@@ -337,7 +345,7 @@ EMSCRIPTEN_BINDINGS(WasmRime) {
       .function("getCommit", &CRimeSession::GetCommit)
       .function("clearComposition", &CRimeSession::ClearComposition)
       .function("getCurrentSchema", &CRimeSession::GetCurrentSchema)
-      .function("actionCandidateOnCurrentPage", &CRimeSession::ActionCandidateOnCurrentPage)
+      .function("actionCandidate", &CRimeSession::ActionCandidate)
       .function("getOption", &CRimeSession::GetOption)
       .function("setOption", &CRimeSession::SetOption)
       .function("getOptionLabel", &CRimeSession::GetOptionLabel)
