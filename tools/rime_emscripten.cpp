@@ -218,6 +218,42 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
   std::string GetOptionLabel(std::string name, bool state) {
     return api->get_state_label(sessionId, name.c_str(), state);
   }
+
+
+  struct CandidateIterator : boost::noncopyable {
+    std::shared_ptr<CRimeSession> session;
+    RimeCandidateListIterator iter;
+    bool ok;
+    CandidateIterator(std::shared_ptr<CRimeSession> session, int idx): session(session) {
+      ok = RimeCandidateListFromIndex(session->sessionId, &iter, idx);
+    }
+
+    void Advance() {
+      if (ok) {
+        ok = RimeCandidateListNext(&iter);
+      }
+    }
+
+    val Current() {
+      if (ok) {
+        auto v = val::object();
+        v.set("index", iter.index);
+        v.set("text", std::string(iter.candidate.text));
+        v.set("comment", std::string(iter.candidate.comment));
+        return v;
+      } else {
+        return val::null();
+      }
+    }
+
+    ~CandidateIterator() {
+      RimeCandidateListEnd(&iter);
+    }
+  };
+
+  std::shared_ptr<CandidateIterator> IterateCandidates(int idx) {
+    return std::make_shared<CandidateIterator>(shared_from_this(), idx);
+  }
 };
 
 std::map<RimeSessionId, CRimeSession*> CRimeSession::sessionMap;
@@ -284,6 +320,7 @@ void PerformMaintenance(bool full) {
   api->start_maintenance(full);
 }
 
+
 EMSCRIPTEN_BINDINGS(WasmRime) {
   function("rimeSetup", &WasmRimeSetup);
   function("rimeFinalize", &WasmRimeFinialize);
@@ -304,5 +341,11 @@ EMSCRIPTEN_BINDINGS(WasmRime) {
       .function("getOption", &CRimeSession::GetOption)
       .function("setOption", &CRimeSession::SetOption)
       .function("getOptionLabel", &CRimeSession::GetOptionLabel)
+      .function("iterateCandidates", &CRimeSession::IterateCandidates)
+      ;
+  class_<CRimeSession::CandidateIterator>("CandidateIterator")
+      .smart_ptr<std::shared_ptr<CRimeSession::CandidateIterator>>("CandidateIterator")
+      .function("advance", &CRimeSession::CandidateIterator::Advance)
+      .function("current", &CRimeSession::CandidateIterator::Current)
       ;
 }
