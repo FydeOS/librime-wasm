@@ -233,6 +233,7 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
     RimeCandidateListIterator iter;
     bool ok;
     CandidateIterator(std::shared_ptr<CRimeSession> session, int idx): session(session) {
+      memset(&iter, 0, sizeof(iter));
       ok = RimeCandidateListFromIndex(session->sessionId, &iter, idx);
     }
 
