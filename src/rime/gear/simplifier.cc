@@ -150,6 +150,9 @@ void Simplifier::Initialize() {
     }
     else if (exists(shared_config_path)) {
       opencc_config_path = shared_config_path;
+    } else {
+      LOG(ERROR) << "OpenCC config not found";
+      return;
     }
   }
   try {
