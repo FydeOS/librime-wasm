@@ -1,0 +1,25 @@
+Index: OpenCC-ver.1.1.6/CMakeLists.txt
+===================================================================
+--- OpenCC-ver.1.1.6.orig/CMakeLists.txt
++++ OpenCC-ver.1.1.6/CMakeLists.txt
+@@ -196,8 +196,8 @@ endif()
+ ######## Subdirectories
+ 
+ add_subdirectory(src)
+-add_subdirectory(doc)
+-add_subdirectory(data)
++# add_subdirectory(doc)
++# add_subdirectory(data)
+ add_subdirectory(test)
+ 
+ ######## Testing
+Index: OpenCC-ver.1.1.6/src/CMakeLists.txt
+===================================================================
+--- OpenCC-ver.1.1.6.orig/src/CMakeLists.txt
++++ OpenCC-ver.1.1.6/src/CMakeLists.txt
+@@ -185,4 +185,4 @@ endif()
+ 
+ # Subdir
+ 
+-add_subdirectory(tools)
++# add_subdirectory(tools)

@@ -1,0 +1,61 @@
+#!/bin/bash
+set -e
+cache_dir="dl-cache"
+build_dir="build"
+mkdir -p $cache_dir
+mkdir -p $build_dir
+function download_and_extract {
+    url=$1
+    filename=$2
+
+    # Check if the file already exists in dl-cache
+    if [ -f $cache_dir/$filename ]; then
+        echo "File $filename already exists in $cache_dir"
+    else
+        # Download the file using a temporary name
+        tempname=$(mktemp)
+        curl -L $url -o $tempname
+
+        # Rename the downloaded file to the final name
+        mv $tempname $cache_dir/$filename
+        echo "File $filename downloaded to $cache_dir"
+    fi
+
+    # Unarchive the file to the build directory
+    if [[ $filename == *.tar.gz ]]; then
+        tar -xzf $cache_dir/$filename -C $build_dir
+    elif [[ $filename == *.zip ]]; then
+        unzip -oq $cache_dir/$filename -d $build_dir
+    else
+        echo "Unknown archive format for file $filename"
+        exit 1
+    fi
+
+    echo "File $filename unarchived to $build_dir directory"
+}
+
+echo Fetching yaml-cpp
+download_and_extract https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.tar.gz yaml-cpp-0.7.0.tar.gz
+
+echo Fetching marisa
+download_and_extract https://github.com/s-yata/marisa-trie/archive/refs/tags/v0.2.6.tar.gz marisa-0.2.6.tar.gz
+
+echo Fetching opencc
+download_and_extract https://github.com/BYVoid/OpenCC/archive/refs/tags/ver.1.1.6.tar.gz opencc-1.1.6.tar.gz
+echo Patching opencc source code
+(cd $build_dir/OpenCC-ver.1.1.6 && patch -p1 < ../../opencc.patch)
+
+echo Fetching boost
+download_and_extract https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.tar.gz boost-1.77.0.tar.gz
+echo Patching boost source code
+(cd $build_dir/boost_1_77_0 && patch -p1 < ../../boost.patch)
+
+# echo Fetching rime source code
+# git clone https://github.com/t123yh/librime.git
+
+echo Fetcing glog source code
+# master needed; 0.6.0 doesn't have emscripten support
+download_and_extract https://github.com/google/glog/archive/refs/heads/master.zip glog-master.zip
+
+
+echo Done.

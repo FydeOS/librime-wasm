@@ -1,0 +1,4 @@
+#!/bin/bash
+export CXXFLAGS="-DBOOST_NO_EXCEPTIONS"
+export CFLAGS=""
+export LDFLAGS=""

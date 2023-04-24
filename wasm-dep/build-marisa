@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+source "./common-flags"
+cd build
+cd marisa-trie-0.2.6
+emconfigure autoreconf -i --force
+emconfigure ./configure --enable-native-code --prefix=$EMSDK/upstream/emscripten/cache/sysroot/ --host=wasm32-unknown-emscripten
+emmake make clean
+emmake make -j$(nproc)
+emmake make install

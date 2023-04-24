@@ -1,0 +1,51 @@
+Index: boost_1_77_0/tools/build/src/tools/emscripten.jam
+===================================================================
+--- boost_1_77_0.orig/tools/build/src/tools/emscripten.jam
++++ boost_1_77_0/tools/build/src/tools/emscripten.jam
+@@ -6,6 +6,7 @@
+ import feature ;
+ import os ;
+ import toolset ;
++import generators ;
+ import common ;
+ import gcc ;
+ import type ;
+@@ -49,6 +50,8 @@ toolset.inherit-flags emscripten : gcc
+         <debug-symbols>off <debug-symbols>on
+         <rtti>off <rtti>on
+         ;
++generators.override builtin.lib-generator : emscripten.prebuilt ;
++generators.override emscripten.searched-lib-generator : searched-lib-generator ;
+ 
+ type.set-generated-target-suffix EXE : <toolset>emscripten : "js" ;
+ type.set-generated-target-suffix OBJ : <toolset>emscripten : "bc" ;
+Index: boost_1_77_0/tools/build/src/tools/gcc.jam
+===================================================================
+--- boost_1_77_0.orig/tools/build/src/tools/gcc.jam
++++ boost_1_77_0/tools/build/src/tools/gcc.jam
+@@ -936,7 +936,7 @@ toolset.flags gcc.link.dll .IMPLIB-COMMA
+     toolset.flags gcc.link OPTIONS <target-os>windows/<runtime-link>static : -Wl,-Bstatic ;
+ 
+     toolset.flags gcc.link HAVE_SONAME <target-os>$(generic-os) : "" ;
+-    toolset.flags gcc.link SONAME_OPTION <target-os>$(generic-os) : -h ;
++    # toolset.flags gcc.link SONAME_OPTION <target-os>$(generic-os) : -h ;
+ 
+     # See note [1]
+     toolset.flags gcc.link OPTIONS <target-os>$(generic-os)/<runtime-link>static : -static ;
+Index: boost_1_77_0/boost/config/platform/wasm.hpp
+===================================================================
+--- boost_1_77_0.orig/boost/config/platform/wasm.hpp
++++ boost_1_77_0/boost/config/platform/wasm.hpp
+@@ -9,6 +9,12 @@
+ 
+ #define BOOST_PLATFORM "Wasm"
+ 
++#ifdef __has_include
++#if __has_include(<unistd.h>)
++#  define BOOST_HAS_UNISTD_H
++#endif
++#endif
++
+ // boilerplate code:
+ #include <boost/config/detail/posix_features.hpp>
+ //

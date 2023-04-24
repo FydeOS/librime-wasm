@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+cd build
+cd boost_1_77_0
+[ -f b2 ] || ./bootstrap.sh
+[ ! -e build ] || rm -rf tmp-build
+source "../../common-flags"
+
+./b2 --build-dir=tmp-build toolset=emscripten threading=multi rtti=off --with-filesystem --with-system --with-regex --prefix=$EMSDK/upstream/emscripten/cache/sysroot install

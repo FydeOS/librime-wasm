@@ -1,0 +1,14 @@
+#!/bin/bash
+if ! command -v emmake &> /dev/null
+then
+    echo "emmake could not be found"
+    exit
+fi
+rm -rf build
+cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")"
+./fetch-source
+./build-boost
+./build-marisa
+./build-opencc
+./build-yaml-cpp
+./build-glog

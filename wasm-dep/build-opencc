@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+. ./common-flags
+cd build
+cd OpenCC-ver.1.1.6
+[ ! -e build ] || rm -rf build
+mkdir -p build
+cd build
+emcmake cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_SYSTEM_MARISA=on
+emmake make -j$(nproc)
+emmake make install
