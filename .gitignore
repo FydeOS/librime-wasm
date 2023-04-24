@@ -14,3 +14,7 @@ node_modules/
 .*.swp
 /*-build/
 /cmake-build-*/
+
+/plugins/*
+!/plugins/*.cc
+!/plugins/*.txt
