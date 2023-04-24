@@ -5,6 +5,9 @@ then
     exit
 fi
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd -P -- "$SCRIPT_DIR/.."
+
 mkdir -p cmake-build-wasm
 cd cmake-build-wasm
 

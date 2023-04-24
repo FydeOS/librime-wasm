@@ -1,0 +1,18 @@
+image: emscripten/emsdk:3.1.36
+
+build:
+  stage: build
+  tags: ["fydarjeeling-docker"]
+  cache:
+    paths:
+    - ./wasm-builder/dl-cache
+  script:
+  - ./wasm-builder/dep/build-all
+  - ./wasm-builder/download-plugins
+  - ./wasm-builder/build-wasm
+  artifacts:
+    paths:
+    - cmake-build-wasm/bin/rime_emscripten.js
+    - cmake-build-wasm/bin/rime_emscripten.wasm 
+  only:
+  - rel
