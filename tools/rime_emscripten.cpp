@@ -15,8 +15,8 @@
 #include <glog/logging.h>
 #include <malloc.h>
 
-void memoryStatistics(){
-  unsigned int totalMemory = 	EM_ASM_INT(return HEAP8.length);
+void memoryStatistics() {
+  unsigned int totalMemory = EM_ASM_INT(return HEAP8.length);
   printf("Total memory: %u bytes\n", totalMemory);
   struct mallinfo i = mallinfo();
   unsigned int dynamicTop = (unsigned int)sbrk(0);
@@ -28,7 +28,7 @@ void memoryStatistics(){
 void rime_require_module_lua();
 
 namespace wasmfs_rime {
-  backend_t my_wasmfs_create_fast_indexeddb_backend();
+backend_t my_wasmfs_create_fast_indexeddb_backend();
 }
 
 static RimeApi* api;
@@ -39,12 +39,13 @@ static void WasmRimeFinialize() {
 
 #include <boost/throw_exception.hpp>
 
-void boost::throw_exception(std::exception const & e){
+void boost::throw_exception(std::exception const& e) {
   fprintf(stderr, "%s\n", e.what());
   abort();
 }
 
-void boost::throw_exception(std::exception const & e, boost::source_location const&){
+void boost::throw_exception(std::exception const& e,
+  boost::source_location const&) {
   fprintf(stderr, "%s\n", e.what());
   abort();
 }
@@ -72,27 +73,30 @@ static int ConvertUtf8Index(const char* str, int b_idx) {
   return chr_idx;
 }
 
-struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSession> {
+struct CRimeSession : boost::noncopyable,
+                      std::enable_shared_from_this<CRimeSession> {
   static std::map<RimeSessionId, CRimeSession*> sessionMap;
 
   RimeSessionId sessionId;
   val onOptionChangedFunction;
-  CRimeSession() {
-    sessionId = 0;
-  }
+  CRimeSession() { sessionId = 0; }
 
-  void Initialize(std::string schema_id, std::string schema_config, val onOptionChanged) {
+  void Initialize(std::string schema_id,
+    std::string schema_config,
+    val onOptionChanged) {
     if (!sessionId) {
       LOG(WARNING) << "Creating session";
       sessionId = api->create_session();
-      Bool b = api->select_schema_with_config(sessionId, schema_id.c_str(), schema_config.c_str());
+      Bool b = api->select_schema_with_config(sessionId,
+        schema_id.c_str(),
+        schema_config.c_str());
       if (!b) {
         LOG(ERROR) << "Failed to create new session";
         api->destroy_session(sessionId);
       }
     }
     onOptionChangedFunction = onOptionChanged;
-    sessionMap.insert({sessionId, this});
+    sessionMap.insert({ sessionId, this });
   }
 
   ~CRimeSession() {
@@ -106,9 +110,7 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
     return api->process_key(sessionId, key_id, mask);
   }
 
-  std::string Hello() {
-    return "Hello";
-  }
+  std::string Hello() { return "Hello"; }
 
   val GetContext() {
     RIME_STRUCT(RimeContext, context);
@@ -119,22 +121,32 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
     auto v = val::object();
 
     v.set("composition", val::object());
-    v["composition"].set("length",context.composition.length);
-    v["composition"].set("cursorPosition", ConvertUtf8Index(context.composition.preedit, context.composition.cursor_pos));
-    v["composition"].set("selectionStart", ConvertUtf8Index(context.composition.preedit, context.composition.sel_start));
-    v["composition"].set("selectionEnd", ConvertUtf8Index(context.composition.preedit, context.composition.sel_end));
-    v["composition"].set("preedit", val::u8string(context.composition.preedit));
+    v["composition"].set("length", context.composition.length);
+    v["composition"].set("cursorPosition",
+      ConvertUtf8Index(context.composition.preedit,
+        context.composition.cursor_pos));
+    v["composition"].set("selectionStart",
+      ConvertUtf8Index(context.composition.preedit,
+        context.composition.sel_start));
+    v["composition"].set("selectionEnd",
+      ConvertUtf8Index(context.composition.preedit,
+        context.composition.sel_end));
+    v["composition"].set("preedit",
+      val::u8string(context.composition.preedit));
 
     v.set("menu", val::object());
     v["menu"].set("pageSize", context.menu.page_size);
     v["menu"].set("pageNumber", context.menu.page_no);
     v["menu"].set("isLastPage", (bool)context.menu.is_last_page);
-    v["menu"].set("highlightedCandidateIndex", context.menu.highlighted_candidate_index);
+    v["menu"].set("highlightedCandidateIndex",
+      context.menu.highlighted_candidate_index);
     v["menu"].set("candidates", val::array());
     for (int i = 0; i < context.menu.num_candidates; i++) {
       v["menu"]["candidates"].set(i, val::object());
-      v["menu"]["candidates"][i].set("text", val::u8string(context.menu.candidates[i].text));
-      v["menu"]["candidates"][i].set("comment", val::u8string(context.menu.candidates[i].comment));
+      v["menu"]["candidates"][i].set("text",
+        val::u8string(context.menu.candidates[i].text));
+      v["menu"]["candidates"][i].set("comment",
+        val::u8string(context.menu.candidates[i].comment));
     }
     v["menu"].set("selectKeys", val::u8string(context.menu.select_keys));
 
@@ -154,7 +166,7 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
     if (!got) {
       return val::null();
     }
-    auto v =  val::object();
+    auto v = val::object();
     v.set("text", val::u8string(commit.text));
 
     api->free_commit(&commit);
@@ -167,7 +179,7 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
     if (!got) {
       return val::null();
     }
-    auto v =  val::object();
+    auto v = val::object();
     v.set("schemaId", val::u8string(status.schema_id));
     v.set("schemaName", val::u8string(status.schema_name));
     v.set("isDisabled", bool(status.is_disabled));
@@ -181,9 +193,7 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
     return v;
   }
 
-  void ClearComposition() {
-    api->clear_composition(sessionId);
-  }
+  void ClearComposition() { api->clear_composition(sessionId); }
 
   val GetCurrentSchema() {
     char bbb[30];
@@ -232,7 +242,8 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
     std::shared_ptr<CRimeSession> session;
     RimeCandidateListIterator iter;
     bool ok;
-    CandidateIterator(std::shared_ptr<CRimeSession> session, int idx): session(session) {
+    CandidateIterator(std::shared_ptr<CRimeSession> session, int idx)
+        : session(session) {
       memset(&iter, 0, sizeof(iter));
       ok = RimeCandidateListFromIndex(session->sessionId, &iter, idx);
     }
@@ -255,9 +266,7 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
       }
     }
 
-    ~CandidateIterator() {
-      RimeCandidateListEnd(&iter);
-    }
+    ~CandidateIterator() { RimeCandidateListEnd(&iter); }
   };
 
   std::shared_ptr<CandidateIterator> IterateCandidates(int idx) {
@@ -268,11 +277,14 @@ struct CRimeSession : boost::noncopyable, std::enable_shared_from_this<CRimeSess
 std::map<RimeSessionId, CRimeSession*> CRimeSession::sessionMap;
 
 static void on_message(void* context_object,
-                       RimeSessionId session_id,
-                       const char* message_type,
-                       const char* message_value) {
-  printf("message: [%lu] [%s] %s\n", session_id, message_type, message_value);
-  if(strcmp(message_type, "option") == 0) {
+  RimeSessionId session_id,
+  const char* message_type,
+  const char* message_value) {
+  printf("message: [%lu] [%s] %s\n",
+    session_id,
+    message_type,
+    message_value);
+  if (strcmp(message_type, "option") == 0) {
     Bool state = message_value[0] != '!';
     const char* option_name = message_value + !state;
     auto ptr = CRimeSession::sessionMap.find(session_id);
@@ -320,7 +332,8 @@ val WasmRimeGetSchemaList() {
   return v;
 }
 
-void WasmRimeRebuildPrismForSchema(std::string schema_id, std::string schema_config) {
+void WasmRimeRebuildPrismForSchema(std::string schema_id,
+  std::string schema_config) {
   api->rebuild_prism_for_schema(schema_id.c_str(), schema_config.c_str());
 }
 
@@ -337,24 +350,23 @@ EMSCRIPTEN_BINDINGS(WasmRime) {
   function("rimeGetSchemaList", &WasmRimeGetSchemaList);
   function("rimeRebuildPrismForSchema", &WasmRimeRebuildPrismForSchema);
   class_<CRimeSession>("RimeSession")
-      .smart_ptr_constructor("RimeSession", &std::make_shared<CRimeSession>)
-      .function("initialize", &CRimeSession::Initialize)
-      .function("hello", &CRimeSession::Hello)
-      .function("processKey", &CRimeSession::ProcessKey)
-      .function("getContext", &CRimeSession::GetContext)
-      .function("getStatus", &CRimeSession::GetStatus)
-      .function("getCommit", &CRimeSession::GetCommit)
-      .function("clearComposition", &CRimeSession::ClearComposition)
-      .function("getCurrentSchema", &CRimeSession::GetCurrentSchema)
-      .function("actionCandidate", &CRimeSession::ActionCandidate)
-      .function("getOption", &CRimeSession::GetOption)
-      .function("setOption", &CRimeSession::SetOption)
-      .function("getOptionLabel", &CRimeSession::GetOptionLabel)
-      .function("iterateCandidates", &CRimeSession::IterateCandidates)
-      ;
+    .smart_ptr_constructor("RimeSession", &std::make_shared<CRimeSession>)
+    .function("initialize", &CRimeSession::Initialize)
+    .function("hello", &CRimeSession::Hello)
+    .function("processKey", &CRimeSession::ProcessKey)
+    .function("getContext", &CRimeSession::GetContext)
+    .function("getStatus", &CRimeSession::GetStatus)
+    .function("getCommit", &CRimeSession::GetCommit)
+    .function("clearComposition", &CRimeSession::ClearComposition)
+    .function("getCurrentSchema", &CRimeSession::GetCurrentSchema)
+    .function("actionCandidate", &CRimeSession::ActionCandidate)
+    .function("getOption", &CRimeSession::GetOption)
+    .function("setOption", &CRimeSession::SetOption)
+    .function("getOptionLabel", &CRimeSession::GetOptionLabel)
+    .function("iterateCandidates", &CRimeSession::IterateCandidates);
   class_<CRimeSession::CandidateIterator>("CandidateIterator")
-      .smart_ptr<std::shared_ptr<CRimeSession::CandidateIterator>>("CandidateIterator")
-      .function("advance", &CRimeSession::CandidateIterator::Advance)
-      .function("current", &CRimeSession::CandidateIterator::Current)
-      ;
+    .smart_ptr<std::shared_ptr<CRimeSession::CandidateIterator>>(
+      "CandidateIterator")
+    .function("advance", &CRimeSession::CandidateIterator::Advance)
+    .function("current", &CRimeSession::CandidateIterator::Current);
 }
