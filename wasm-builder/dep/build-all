@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 if ! command -v emmake &> /dev/null
 then
     echo "emmake could not be found"

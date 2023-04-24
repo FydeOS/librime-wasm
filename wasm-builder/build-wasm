@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 if ! command -v emcmake &> /dev/null
 then
     echo "emcmake could not be found"
