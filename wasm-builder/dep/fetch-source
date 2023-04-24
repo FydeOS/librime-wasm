@@ -1,31 +1,22 @@
 #!/bin/bash
 set -e
-cache_dir="dl-cache"
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd $SCRIPT_DIR
+source ../cached-downloader
+
 build_dir="build"
-mkdir -p $cache_dir
 mkdir -p $build_dir
+
 function download_and_extract {
-    url=$1
-    filename=$2
-
-    # Check if the file already exists in dl-cache
-    if [ -f $cache_dir/$filename ]; then
-        echo "File $filename already exists in $cache_dir"
-    else
-        # Download the file using a temporary name
-        tempname=$(mktemp)
-        curl -L $url -o $tempname
-
-        # Rename the downloaded file to the final name
-        mv $tempname $cache_dir/$filename
-        echo "File $filename downloaded to $cache_dir"
-    fi
+    local url=$1
+    local filename=$2
+    dl_file $1 $2
 
     # Unarchive the file to the build directory
     if [[ $filename == *.tar.gz ]]; then
-        tar -xzf $cache_dir/$filename -C $build_dir
+        tar -xzf $DL_CACHE_DIR/$filename -C $build_dir
     elif [[ $filename == *.zip ]]; then
-        unzip -oq $cache_dir/$filename -d $build_dir
+        unzip -oq $DL_CACHE_DIR/$filename -d $build_dir
     else
         echo "Unknown archive format for file $filename"
         exit 1

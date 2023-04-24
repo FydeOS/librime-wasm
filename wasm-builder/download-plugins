@@ -1,0 +1,46 @@
+#!/bin/bash
+set -e
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+source $SCRIPT_DIR/cached-downloader
+cd -P -- "$SCRIPT_DIR/.."
+
+OCTAGRAM_DIR=plugins/octagram
+if [ ! -f $OCTAGRAM_DIR/.ok ];
+then
+    echo Downloading octagram...
+    rm -rf $OCTAGRAM_DIR
+    VERSION=a6ced5a1d623afed17284fbaa395dd3a8b019a14
+    dl_file https://github.com/lotem/librime-octagram/archive/$VERSION.zip octagram-$VERSION.zip
+    unzip $DL_CACHE_DIR/octagram-$VERSION.zip -d plugins
+    mv plugins/librime-octagram-$VERSION $OCTAGRAM_DIR
+    touch $OCTAGRAM_DIR/.ok
+else
+    echo octagram exists, skipped
+fi
+
+LUA_DIR=plugins/lua
+if [ ! -f $LUA_DIR/.ok ];
+then
+    echo Downloading lua plugin...
+    rm -rf $LUA_DIR
+    VERSION=03a2bd9e172549cb16c0718b2c9b68e8c5678085
+    dl_file https://github.com/hchunhui/librime-lua/archive/$VERSION.zip lua-plugin-$VERSION.zip
+    unzip $DL_CACHE_DIR/lua-plugin-$VERSION.zip -d plugins
+    mv plugins/librime-lua-$VERSION $LUA_DIR
+
+    echo Downloading lua engine...
+    VERSION=5.4.4
+    dl_file http://www.lua.org/ftp/lua-$VERSION.tar.gz lua-$VERSION.tar.gz
+    LUA_TMP_DIR=$(mktemp -d)
+    tar zxf $DL_CACHE_DIR/lua-$VERSION.tar.gz -C $LUA_TMP_DIR
+
+    mkdir $LUA_DIR/thirdparty
+    cp -r $LUA_TMP_DIR/lua-$VERSION/src $LUA_DIR/thirdparty/lua5.4
+    rm $LUA_DIR/thirdparty/lua5.4/lua.c
+    rm $LUA_DIR/thirdparty/lua5.4/luac.c
+    (cd $LUA_DIR && patch -p1 < $SCRIPT_DIR/librime-lua.patch)
+    touch $LUA_DIR/.ok
+else
+    echo lua exists, skipped
+fi

@@ -1,0 +1,93 @@
+From 032a27282f71ab79b5923353f70e37b0cef3807c Mon Sep 17 00:00:00 2001
+From: Yunhao Tian <t123yh@outlook.com>
+Date: Fri, 7 Apr 2023 17:25:39 +0800
+Subject: [PATCH] Fix compilation on emscripten
+
+---
+ CMakeLists.txt   | 1 +
+ src/opencc.cc    | 5 ++---
+ src/types.cc     | 1 +
+ src/types_ext.cc | 6 +++---
+ 4 files changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ff75973..b9bc9cd 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,3 +1,4 @@
++set(CMAKE_CXX_STANDARD 14)
+ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lua5.4/lua.h")
+   find_package(PkgConfig)
+   if(PkgConfig_FOUND)
+diff --git a/src/opencc.cc b/src/opencc.cc
+index 77f7495..c3111ba 100644
+--- a/src/opencc.cc
++++ b/src/opencc.cc
+@@ -21,7 +21,6 @@
+ #include "lib/luatype_boost_optional.h"
+ 
+ using namespace std;
+-using boost::optional;
+ 
+ namespace {
+ 
+@@ -132,7 +131,7 @@ namespace OpenccReg {
+   typedef Opencc T;
+   namespace ns = boost::filesystem;
+ 
+-  optional<T> make(const string &filename) {
++  boost::optional<T> make(const string &filename) {
+     string user_path( RimeGetUserDataDir());
+     string shared_path(RimeGetSharedDataDir());
+     user_path += "/opencc/" + filename;
+@@ -153,7 +152,7 @@ namespace OpenccReg {
+       return {};
+     }
+   }
+-  optional<vector<string>> convert_word(T &t,const string &s) {
++  boost::optional<vector<string>> convert_word(T &t,const string &s) {
+     vector<string> res;
+     if (t.ConvertWord(s,&res))
+       return res;
+diff --git a/src/types.cc b/src/types.cc
+index a8b73c4..961e9d1 100644
+--- a/src/types.cc
++++ b/src/types.cc
+@@ -18,6 +18,7 @@
+ #include "lua_gears.h"
+ #include <rime/service.h>
+ #include <boost/regex.hpp>
++#include <vector>
+ 
+ #include "lib/lua_export_type.h"
+ #include "lib/luatype_boost_optional.h"
+diff --git a/src/types_ext.cc b/src/types_ext.cc
+index 330fa7e..181b994 100644
+--- a/src/types_ext.cc
++++ b/src/types_ext.cc
+@@ -11,7 +11,7 @@
+ #include <rime/translator.h>
+ #include <rime/filter.h>
+ #include <rime/dict/reverse_lookup_dictionary.h>
+-#include <rime/dict/level_db.h>
++#include <rime/dict/js_indexed_db.h>
+ 
+ #include "lib/lua_export_type.h"
+ #include "lib/luatype_boost_optional.h"
+@@ -237,12 +237,12 @@ namespace DbAccessorReg{
+   };
+ }
+ namespace LevelDbReg{
+-  typedef LevelDb T;
++  typedef JsIndexedDb T;
+   typedef DbAccessor A;
+ 
+   //
+   an<T> make(const string& file_name, const string& db_name){
+-    return New<LevelDb>(file_name,db_name,"userdb");
++    return New<JsIndexedDb>(file_name,db_name,"userdb");
+   }
+   optional<string> fetch(an<T> t, const string& key){
+     string res;
+-- 
+GitLab
