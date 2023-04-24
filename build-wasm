@@ -1,9 +1,16 @@
 #!/bin/bash
-export CXXFLAGS="-Wno-deprecated-declarations  -DBOOST_NO_EXCEPTIONS"
-export LDFLAGS="-sASYNCIFY -s ALLOW_MEMORY_GROWTH=1 -sWASMFS -s EXPORT_ES6=1 -sMODULARIZE=1 -sUSE_ES6_IMPORT_META=0 -sENVIRONMENT=worker --bind -sNO_DYNAMIC_EXECUTION=1"
+if ! command -v emcmake &> /dev/null
+then
+    echo "emcmake could not be found"
+    exit
+fi
 
 mkdir -p cmake-build-wasm
 cd cmake-build-wasm
 
-emcmake cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=0 -DENABLE_LOGGING=on -DBUILD_STATIC=on -DBUILD_MERGED_PLUGINS=on
-emmake make -j4 rime_emscripten
+emcmake cmake .. \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=0 -DENABLE_LOGGING=on -DBUILD_STATIC=on -DBUILD_MERGED_PLUGINS=on \
+  -DCMAKE_CXX_FLAGS="-Wno-deprecated-declarations -DBOOST_NO_EXCEPTIONS" \
+  -DCMAKE_EXE_LINKER_FLAGS="-sASYNCIFY -sALLOW_MEMORY_GROWTH=1 -sWASMFS -s EXPORT_ES6=1 -sMODULARIZE=1 -sUSE_ES6_IMPORT_META=0 -sENVIRONMENT=worker --bind -sNO_DYNAMIC_EXECUTION=1"
+
+emmake make -j$(nproc) rime_emscripten
